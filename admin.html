@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Perrier 管理画面</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Yu Gothic", sans-serif;
+  background: linear-gradient(135deg,#10281f,#1f4d3a);
+}
+
+.container {
+  max-width: 600px;
+  margin: 20px auto;
+  background: #fffaf0;
+  padding: 20px;
+  border-radius: 20px;
+}
+
+/* ログイン画面 */
+#loginScreen {
+  text-align: center;
+}
+
+#loginScreen input {
+  width: 80%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+#loginScreen button {
+  margin-top: 10px;
+  padding: 12px;
+  width: 80%;
+  font-size: 16px;
+  background: #1f4d3a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+
+/* 管理画面 */
+.card {
+  margin-top: 20px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: #1f4d3a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- ■ ログイン画面 -->
+<div id="loginScreen">
+  <h2>管理者ログイン</h2>
+  <input type="password" id="adminPass" placeholder="パスワード">
+  <button onclick="login()">ログイン</button>
+</div>
+
+<!-- ■ 管理画面（最初は非表示） -->
+<div id="adminContent" style="display:none;">
+
+<h1>Perrier 管理画面</h1>
+
+<div class="card">
+  <h3>休業日登録</h3>
+  <input type="date" id="closedDate">
+  <input type="text" id="closedReason" placeholder="理由">
+  <button onclick="addClosedDate()">登録</button>
+</div>
+
+<div class="card">
+  <h3>時間枠停止</h3>
+  <input type="date" id="slotDate">
+  <select id="slotTime">
+    <option>10:00〜11:00</option>
+    <option>11:00〜12:00</option>
+    <option>14:00〜15:00</option>
+    <option>15:30〜16:30</option>
+    <option>18:00〜19:00</option>
+  </select>
+  <button onclick="addClosedSlot()">登録</button>
+</div>
+
+</div>
+</div>
+
+<!-- ■ Firebase + ログイン -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+/* ★ここにあなたのfirebaseConfigを貼る */
+const firebaseConfig = {
+  apiKey: "ここを書き換え",
+  authDomain: "ここを書き換え",
+  projectId: "ここを書き換え",
+  storageBucket: "ここを書き換え",
+  messagingSenderId: "ここを書き換え",
+  appId: "ここを書き換え"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ログイン処理 */
+window.login = function() {
+  const pass = document.getElementById("adminPass").value;
+
+  if (pass === "yoshi") {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("adminContent").style.display = "block";
+  } else {
+    alert("パスワードが違います");
+  }
+};
+
+/* 休業日登録 */
+window.addClosedDate = async function() {
+  const date = document.getElementById("closedDate").value;
+  const reason = document.getElementById("closedReason").value;
+
+  await setDoc(doc(db,"closedDates",date),{
+    date,
+    reason,
+    status:"active"
+  });
+
+  alert("登録しました");
+};
+
+/* 時間枠停止 */
+window.addClosedSlot = async function() {
+  const date = document.getElementById("slotDate").value;
+  const slot = document.getElementById("slotTime").value;
+
+  await setDoc(doc(db,"closedSlots",date+"_"+slot),{
+    date,
+    slot,
+    status:"active"
+  });
+
+  alert("登録しました");
+};
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Perrier 予約</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Yu Gothic", sans-serif;
+  background: linear-gradient(135deg,#10281f,#1f4d3a);
+}
+
+.container {
+  max-width: 580px;
+  margin: 20px auto;
+  background: #fffaf0;
+  padding: 20px;
+  border-radius: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #1f4d3a;
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(7,1fr);
+  gap: 6px;
+}
+
+.day-button {
+  height: 45px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+}
+
+/* 休業日（店側） */
+.day-button.closed {
+  background: #e6b8b8;
+  color: #7a2e2e;
+}
+
+/* 時間枠 */
+.slot-button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+}
+
+/* 予約済み */
+.slot-button.booked {
+  background: #9e9e9e;
+  color: #fff;
+}
+
+/* 店側ブロック */
+.slot-button.closed {
+  background: #c98f8f;
+  color: #fff;
+}
+
+/* 空き */
+.slot-button.available {
+  background: #1f4d3a;
+  color: #fff;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>Perrier予約</h1>
+
+  <div id="dateScreen">
+    <div id="calendar"></div>
+  </div>
+
+  <div id="slotScreen" class="hidden">
+    <h3 id="selectedDate"></h3>
+    <input id="name" placeholder="名前">
+    <div id="slots"></div>
+    <button onclick="back()">戻る</button>
+  </div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  where,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAUUlV54Y08A3HHPKUM9j3XzBVM4uOGhFA",
+  authDomain: "perrier-713e4.firebaseapp.com",
+  projectId: "perrier-713e4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const slots = [
+  "10:00〜11:00",
+  "11:00〜12:00",
+  "14:00〜15:00",
+  "15:30〜16:30",
+  "18:00〜19:00"
+];
+
+let selectedDate = "";
+
+function renderCalendar() {
+  const calendar = document.getElementById("calendar");
+  calendar.innerHTML = "";
+
+  const grid = document.createElement("div");
+  grid.className = "day-grid";
+
+  for (let d = 1; d <= 31; d++) {
+    const btn = document.createElement("button");
+    btn.textContent = d;
+    btn.className = "day-button";
+
+    btn.onclick = () => selectDate("2026-05-" + String(d).padStart(2,"0"));
+
+    grid.appendChild(btn);
+  }
+
+  calendar.appendChild(grid);
+}
+
+function selectDate(date) {
+  selectedDate = date;
+  document.getElementById("dateScreen").classList.add("hidden");
+  document.getElementById("slotScreen").classList.remove("hidden");
+  document.getElementById("selectedDate").textContent = date;
+  loadSlots();
+}
+
+function back() {
+  document.getElementById("slotScreen").classList.add("hidden");
+  document.getElementById("dateScreen").classList.remove("hidden");
+}
+
+function loadSlots() {
+  const area = document.getElementById("slots");
+  area.innerHTML = "";
+
+  const q = query(collection(db,"reservations"),
+    where("date","==",selectedDate),
+    where("status","==","active")
+  );
+
+  onSnapshot(q,(snap)=>{
+    const list = [];
+    snap.forEach(d=>list.push(d.data()));
+
+    slots.forEach(s=>{
+      const btn = document.createElement("button");
+      btn.className = "slot-button";
+
+      const found = list.find(r=>r.slot===s);
+
+      if (found) {
+        btn.classList.add("booked");
+        btn.textContent = "× " + s;
+      } else {
+        btn.classList.add("available");
+        btn.textContent = "○ " + s;
+        btn.onclick = ()=>reserve(s);
+      }
+
+      area.appendChild(btn);
+    });
+  });
+}
+
+async function reserve(slot) {
+  const name = document.getElementById("name").value;
+  if (!name) return alert("名前入力");
+
+  await addDoc(collection(db,"reservations"),{
+    name,
+    date: selectedDate,
+    slot,
+    status: "active",
+    created: new Date()
+  });
+
+  alert("予約完了");
+}
+
+renderCalendar();
+
+</script>
+
+</body>
+</html>
