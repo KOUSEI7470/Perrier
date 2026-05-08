@@ -11,7 +11,7 @@ import jpholiday
 
 
 BASE_DIR = Path(__file__).resolve().parent
-KEY_PATH = BASE_DIR / "serviceAccountKey.json"
+KEY_PATH = BASE_DIR / "keys" / "serviceAccountKey.json"
 OUTPUT_PATH = BASE_DIR / "予約スケジュール.xlsx"
 
 SLOTS = [
