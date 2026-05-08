@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Perrier 管理画面</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
@@ -12,39 +13,28 @@ body {
 }
 
 .container {
-  max-width: 600px;
+  max-width: 900px;
   margin: 20px auto;
   background: #fffaf0;
   padding: 20px;
   border-radius: 20px;
 }
 
-/* ログイン画面 */
-#loginScreen {
-  text-align: center;
+h1, h2, h3 {
+  color: #1f4d3a;
 }
 
-#loginScreen input {
-  width: 80%;
-  padding: 12px;
-  margin-top: 10px;
+input, textarea, button {
+  box-sizing: border-box;
   font-size: 16px;
 }
 
-#loginScreen button {
-  margin-top: 10px;
-  padding: 12px;
-  width: 80%;
-  font-size: 16px;
-  background: #1f4d3a;
-  color: white;
-  border: none;
-  border-radius: 10px;
-}
-
-/* 管理画面 */
-.card {
-  margin-top: 20px;
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
 }
 
 button {
@@ -56,56 +46,148 @@ button {
   border: none;
   border-radius: 10px;
 }
-</style>
 
+.card {
+  background: white;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 15px;
+}
+
+.months {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.calendar {
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.week, .days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.week div {
+  text-align: center;
+  font-weight: bold;
+  color: #555;
+}
+
+.day {
+  min-height: 48px;
+  padding: 5px;
+  border-radius: 8px;
+  background: #eef4ef;
+  cursor: pointer;
+  text-align: center;
+}
+
+.day.gray {
+  background: #ccc;
+  color: #777;
+}
+
+.day.closed {
+  background: #e88;
+  color: white;
+}
+
+.day.hasSlots {
+  background: #bfe6c8;
+}
+
+.day.selected {
+  outline: 3px solid #1f4d3a;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.list-item {
+  background: #f3f3f3;
+  padding: 8px;
+  margin-top: 6px;
+  border-radius: 8px;
+}
+
+@media (max-width: 700px) {
+  .months {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 </head>
 
 <body>
-
 <div class="container">
 
-<!-- ■ ログイン画面 -->
 <div id="loginScreen">
   <h2>管理者ログイン</h2>
   <input type="password" id="adminPass" placeholder="パスワード">
   <button onclick="login()">ログイン</button>
 </div>
 
-<!-- ■ 管理画面（最初は非表示） -->
 <div id="adminContent" style="display:none;">
 
 <h1>Perrier 管理画面</h1>
 
 <div class="card">
-  <h3>休業日登録</h3>
-  <input type="date" id="closedDate">
-  <input type="text" id="closedReason" placeholder="理由">
-  <button onclick="addClosedDate()">登録</button>
+  <h3>予約受付期間</h3>
+  <label>受付開始日</label>
+  <input type="date" id="periodStart">
+  <label>受付終了日</label>
+  <input type="date" id="periodEnd">
+  <button onclick="savePeriod()">受付期間を保存</button>
 </div>
 
 <div class="card">
-  <h3>時間枠停止</h3>
-  <input type="date" id="slotDate">
-  <select id="slotTime">
-    <option>10:00〜11:00</option>
-    <option>11:00〜12:00</option>
-    <option>14:00〜15:00</option>
-    <option>15:30〜16:30</option>
-    <option>18:00〜19:00</option>
-  </select>
-  <button onclick="addClosedSlot()">登録</button>
+  <h3>日別予約枠カレンダー</h3>
+  <p>日付をクリックして、その日の予約枠・休業日を設定します。</p>
+  <div id="calendarArea" class="months"></div>
+</div>
+
+<div class="card">
+  <h3>選択中の日付</h3>
+  <p id="selectedDateText">日付を選択してください</p>
+
+  <h3>この日の予約時間枠</h3>
+  <p class="small">1行に1枠ずつ入力してください。例：10:00〜10:30</p>
+  <textarea id="slotText" rows="6" placeholder="10:00〜10:30&#10;10:45〜11:15"></textarea>
+  <button onclick="saveSlots()">この日の時間枠を保存</button>
+
+  <h3>休業日設定</h3>
+  <input type="text" id="closedReason" placeholder="休業理由">
+  <button onclick="saveClosedDate()">この日を休業日にする</button>
+  <button onclick="deleteClosedDate()">休業日を解除する</button>
+</div>
+
+<div class="card">
+  <h3>登録内容</h3>
+  <div id="summaryArea"></div>
 </div>
 
 </div>
 </div>
 
-<!-- ■ Firebase + ログイン -->
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-/* ★ここにあなたのfirebaseConfigを貼る */
+/* ★ここを index.html と同じ firebaseConfig に置き換え */
 const firebaseConfig = {
   apiKey: "AIzaSyAUUlV54Y08A3HHPKUM9j3XzBVM4uOGhFA",
   authDomain: "perrier-713e4.firebaseapp.com",
@@ -115,47 +197,270 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ログイン処理 */
-window.login = function() {
+let selectedDate = "";
+let periodStart = "";
+let periodEnd = "";
+let closedDates = {};
+let dailySlots = {};
+
+window.login = async function() {
   const pass = document.getElementById("adminPass").value;
 
   if (pass === "yoshi") {
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("adminContent").style.display = "block";
+    await loadAll();
   } else {
     alert("パスワードが違います");
   }
 };
 
-/* 休業日登録 */
-window.addClosedDate = async function() {
-  const date = document.getElementById("closedDate").value;
-  const reason = document.getElementById("closedReason").value;
+async function loadAll() {
+  await loadPeriod();
+  await loadClosedDates();
+  await loadDailySlots();
+  renderCalendars();
+  renderSummary();
+}
 
-  await setDoc(doc(db,"closedDates",date),{
-    date,
-    reason,
-    status:"active"
+async function loadPeriod() {
+  const ref = doc(db, "settings", "reservationPeriod");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data();
+    periodStart = data.startDate || "";
+    periodEnd = data.endDate || "";
+    document.getElementById("periodStart").value = periodStart;
+    document.getElementById("periodEnd").value = periodEnd;
+  }
+}
+
+async function loadClosedDates() {
+  closedDates = {};
+  const snap = await getDocs(collection(db, "closedDates"));
+  snap.forEach(d => {
+    closedDates[d.id] = d.data();
+  });
+}
+
+async function loadDailySlots() {
+  dailySlots = {};
+  const snap = await getDocs(collection(db, "dailySlots"));
+  snap.forEach(d => {
+    dailySlots[d.id] = d.data();
+  });
+}
+
+window.savePeriod = async function() {
+  periodStart = document.getElementById("periodStart").value;
+  periodEnd = document.getElementById("periodEnd").value;
+
+  if (!periodStart || !periodEnd) {
+    alert("受付開始日と終了日を入力してください");
+    return;
+  }
+
+  await setDoc(doc(db, "settings", "reservationPeriod"), {
+    startDate: periodStart,
+    endDate: periodEnd
   });
 
-  alert("登録しました");
+  alert("受付期間を保存しました");
+  await loadAll();
 };
 
-/* 時間枠停止 */
-window.addClosedSlot = async function() {
-  const date = document.getElementById("slotDate").value;
-  const slot = document.getElementById("slotTime").value;
+window.saveSlots = async function() {
+  if (!selectedDate) {
+    alert("日付を選択してください");
+    return;
+  }
 
-  await setDoc(doc(db,"closedSlots",date+"_"+slot),{
-    date,
-    slot,
-    status:"active"
+  const text = document.getElementById("slotText").value;
+  const slots = text
+    .split("\n")
+    .map(s => s.trim())
+    .filter(s => s !== "");
+
+  await setDoc(doc(db, "dailySlots", selectedDate), {
+    date: selectedDate,
+    slots: slots
   });
 
-  alert("登録しました");
+  alert("時間枠を保存しました");
+  await loadAll();
+  selectDate(selectedDate);
 };
 
+window.saveClosedDate = async function() {
+  if (!selectedDate) {
+    alert("日付を選択してください");
+    return;
+  }
+
+  const reason = document.getElementById("closedReason").value || "休業日";
+
+  await setDoc(doc(db, "closedDates", selectedDate), {
+    date: selectedDate,
+    reason: reason,
+    status: "active"
+  });
+
+  alert("休業日を登録しました");
+  await loadAll();
+  selectDate(selectedDate);
+};
+
+window.deleteClosedDate = async function() {
+  if (!selectedDate) {
+    alert("日付を選択してください");
+    return;
+  }
+
+  await deleteDoc(doc(db, "closedDates", selectedDate));
+
+  alert("休業日を解除しました");
+  await loadAll();
+  selectDate(selectedDate);
+};
+
+function renderCalendars() {
+  const area = document.getElementById("calendarArea");
+  area.innerHTML = "";
+
+  const today = new Date();
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+  area.appendChild(createMonthCalendar(thisMonth));
+  area.appendChild(createMonthCalendar(nextMonth));
+}
+
+function createMonthCalendar(baseDate) {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+
+  const wrap = document.createElement("div");
+  wrap.className = "calendar";
+
+  const title = document.createElement("h3");
+  title.textContent = `${year}年${month + 1}月`;
+  wrap.appendChild(title);
+
+  const week = document.createElement("div");
+  week.className = "week";
+  ["日", "月", "火", "水", "木", "金", "土"].forEach(w => {
+    const div = document.createElement("div");
+    div.textContent = w;
+    week.appendChild(div);
+  });
+  wrap.appendChild(week);
+
+  const days = document.createElement("div");
+  days.className = "days";
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement("div");
+    days.appendChild(blank);
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    const dateStr = formatDate(year, month + 1, d);
+    const div = document.createElement("div");
+    div.className = "day";
+    div.innerHTML = `<strong>${d}</strong>`;
+
+    if (isPast(dateStr) || isOutsidePeriod(dateStr)) {
+      div.classList.add("gray");
+    }
+
+    if (closedDates[dateStr]) {
+      div.classList.add("closed");
+      div.innerHTML += `<div class="small">休</div>`;
+    }
+
+    if (dailySlots[dateStr] && dailySlots[dateStr].slots && dailySlots[dateStr].slots.length > 0) {
+      div.classList.add("hasSlots");
+      div.innerHTML += `<div class="small">${dailySlots[dateStr].slots.length}枠</div>`;
+    }
+
+    if (dateStr === selectedDate) {
+      div.classList.add("selected");
+    }
+
+    div.onclick = () => selectDate(dateStr);
+    days.appendChild(div);
+  }
+
+  wrap.appendChild(days);
+  return wrap;
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+
+  document.getElementById("selectedDateText").textContent = dateStr;
+
+  const slots = dailySlots[dateStr]?.slots || [];
+  document.getElementById("slotText").value = slots.join("\n");
+
+  const reason = closedDates[dateStr]?.reason || "";
+  document.getElementById("closedReason").value = reason;
+
+  renderCalendars();
+}
+
+window.selectDate = selectDate;
+
+function renderSummary() {
+  const area = document.getElementById("summaryArea");
+  area.innerHTML = "";
+
+  const p = document.createElement("p");
+  p.innerHTML = `<strong>受付期間：</strong>${periodStart || "未設定"} ～ ${periodEnd || "未設定"}`;
+  area.appendChild(p);
+
+  const closedTitle = document.createElement("h4");
+  closedTitle.textContent = "休業日";
+  area.appendChild(closedTitle);
+
+  Object.keys(closedDates).sort().forEach(date => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.textContent = `${date}：${closedDates[date].reason || ""}`;
+    area.appendChild(div);
+  });
+
+  const slotTitle = document.createElement("h4");
+  slotTitle.textContent = "日別時間枠";
+  area.appendChild(slotTitle);
+
+  Object.keys(dailySlots).sort().forEach(date => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    const slots = dailySlots[date].slots || [];
+    div.textContent = `${date}：${slots.join(" / ")}`;
+    area.appendChild(div);
+  });
+}
+
+function formatDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function isPast(dateStr) {
+  const today = new Date();
+  const todayStr = formatDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  return dateStr < todayStr;
+}
+
+function isOutsidePeriod(dateStr) {
+  if (!periodStart || !periodEnd) return false;
+  return dateStr < periodStart || dateStr > periodEnd;
+}
 </script>
-
 </body>
 </html>
