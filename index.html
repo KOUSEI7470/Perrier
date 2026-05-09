@@ -18,9 +18,7 @@ body {
   padding: 20px;
   border-radius: 20px;
 }
-h1, h2, h3 {
-  color: #1f4d3a;
-}
+h1, h2, h3 { color: #1f4d3a; }
 .card {
   background: white;
   padding: 15px;
@@ -73,9 +71,7 @@ h1, h2, h3 {
 .day.selected {
   outline: 3px solid #1f4d3a;
 }
-.small {
-  font-size: 12px;
-}
+.small { font-size: 12px; }
 .slot-button {
   width: 100%;
   padding: 12px;
@@ -86,9 +82,7 @@ h1, h2, h3 {
   color: white;
   font-size: 16px;
 }
-.slot-button.selected {
-  background: #c08a2b;
-}
+.slot-button.selected { background: #c08a2b; }
 .slot-button.disabled {
   background: #999;
   cursor: not-allowed;
@@ -113,6 +107,15 @@ button.submit {
   border: none;
   border-radius: 10px;
 }
+.cancel-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  background: #9b2c2c;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
 .my-reservation {
   background: #fff3cd;
   padding: 12px;
@@ -126,9 +129,7 @@ button.submit {
   line-height: 1.8;
 }
 @media (max-width: 700px) {
-  .months {
-    grid-template-columns: 1fr;
-  }
+  .months { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -176,6 +177,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   collection,
   getDocs,
   serverTimestamp
@@ -242,7 +244,6 @@ async function loadReservations() {
 
 function renderPeriodText() {
   const area = document.getElementById("periodText");
-
   if (periodStart && periodEnd) {
     area.textContent = `予約受付期間：${periodStart} ～ ${periodEnd}`;
   } else {
@@ -410,9 +411,8 @@ window.submitReservation = async function() {
 
   if (snap.exists() && snap.data().status !== "cancelled") {
     alert("この時間枠はすでに予約されています。");
-    await loadReservations();
+    await loadAll();
     renderSlots(selectedDate);
-    renderCalendars();
     return;
   }
 
@@ -423,16 +423,18 @@ window.submitReservation = async function() {
     phone: phone,
     memo: memo,
     status: "reserved",
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
+    cancelledAt: null,
+    cancelledBy: null
   });
 
   const myReservation = {
-    reservationId: reservationId,
+    reservationId,
     date: selectedDate,
     slot: selectedSlot,
-    name: name,
-    phone: phone,
-    memo: memo
+    name,
+    phone,
+    memo
   };
 
   localStorage.setItem("perrierMyReservation", JSON.stringify(myReservation));
@@ -445,6 +447,40 @@ window.submitReservation = async function() {
 
   selectedDate = "";
   selectedSlot = "";
+
+  await loadAll();
+  await showMyReservation();
+
+  document.getElementById("selectedDateText").textContent = "日付を選択してください";
+  document.getElementById("slotArea").textContent = "日付を選択すると時間枠が表示されます。";
+};
+
+window.cancelMyReservation = async function() {
+  const saved = localStorage.getItem("perrierMyReservation");
+
+  if (!saved) {
+    alert("この端末に予約情報がありません。");
+    return;
+  }
+
+  const data = JSON.parse(saved);
+
+  if (!data.reservationId) {
+    alert("予約IDが確認できません。店舗へお問い合わせください。");
+    return;
+  }
+
+  if (!confirm("この予約をキャンセルしますか？")) {
+    return;
+  }
+
+  await updateDoc(doc(db, "reservations", data.reservationId), {
+    status: "cancelled",
+    cancelledAt: serverTimestamp(),
+    cancelledBy: "customer"
+  });
+
+  alert("予約をキャンセルしました。");
 
   await loadAll();
   await showMyReservation();
@@ -478,8 +514,7 @@ async function showMyReservation() {
     return;
   }
 
-  const ref = doc(db, "reservations", data.reservationId);
-  const snap = await getDoc(ref);
+  const snap = await getDoc(doc(db, "reservations", data.reservationId));
 
   if (!snap.exists()) {
     area.innerHTML = `
@@ -497,7 +532,7 @@ async function showMyReservation() {
     area.innerHTML = `
       <div class="cancelled-reservation">
         <strong>この予約はキャンセルされました。</strong><br>
-        予約日時：${data.date}　${data.slot}<br>
+        予約日時：${latest.date || data.date}　${latest.slot || data.slot}<br>
         必要な場合は、再度ご予約ください。
       </div>
     `;
@@ -511,7 +546,8 @@ async function showMyReservation() {
       <strong>お名前</strong><br>
       ${latest.name || data.name || ""}<br>
       <strong>電話番号</strong><br>
-      ${latest.phone || data.phone || ""}
+      ${latest.phone || data.phone || ""}<br>
+      <button class="cancel-btn" onclick="cancelMyReservation()">この予約をキャンセル</button>
     </div>
   `;
 }
