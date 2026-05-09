@@ -1,575 +1,595 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Perrier 予約ページ</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body {
-  margin: 0;
-  font-family: "Yu Gothic", sans-serif;
-  background: linear-gradient(135deg,#10281f,#1f4d3a);
-}
-.container {
-  max-width: 900px;
-  margin: 20px auto;
-  background: #fffaf0;
-  padding: 20px;
-  border-radius: 20px;
-}
-h1, h2, h3 { color: #1f4d3a; }
-.card {
-  background: white;
-  padding: 15px;
-  margin-top: 20px;
-  border-radius: 15px;
-}
-.months {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-.calendar {
-  background: #fff;
-  padding: 10px;
-  border-radius: 12px;
-}
-.week, .days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-.week div {
-  text-align: center;
-  font-weight: bold;
-  color: #555;
-}
-.day {
-  min-height: 52px;
-  padding: 5px;
-  border-radius: 8px;
-  background: #bfe6c8;
-  cursor: pointer;
-  text-align: center;
-}
-.day.gray {
-  background: #ccc;
-  color: #777;
-  cursor: not-allowed;
-}
-.day.closed {
-  background: #e88;
-  color: white;
-  cursor: not-allowed;
-}
-.day.full {
-  background: #999;
-  color: white;
-  cursor: not-allowed;
-}
-.day.selected {
-  outline: 3px solid #1f4d3a;
-}
-.small { font-size: 12px; }
-.slot-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 8px;
-  border: none;
-  border-radius: 10px;
-  background: #1f4d3a;
-  color: white;
-  font-size: 16px;
-}
-.slot-button.selected { background: #c08a2b; }
-.slot-button.disabled {
-  background: #999;
-  cursor: not-allowed;
-}
-input, textarea, button {
-  box-sizing: border-box;
-  font-size: 16px;
-}
-input, textarea {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-}
-button.submit {
-  width: 100%;
-  padding: 14px;
-  margin-top: 15px;
-  background: #1f4d3a;
-  color: white;
-  border: none;
-  border-radius: 10px;
-}
-.cancel-btn {
-  width: 100%;
-  padding: 12px;
-  margin-top: 12px;
-  background: #9b2c2c;
-  color: white;
-  border: none;
-  border-radius: 10px;
-}
-.my-reservation {
-  background: #fff3cd;
-  padding: 12px;
-  border-radius: 10px;
-  line-height: 1.8;
-}
-.cancelled-reservation {
-  background: #ffd6d6;
-  padding: 12px;
-  border-radius: 10px;
-  line-height: 1.8;
-}
-@media (max-width: 700px) {
-  .months { grid-template-columns: 1fr; }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perrier 予約フォーム</title>
+  <script src="./config.js"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      background: #f4f7fb;
+      color: #222;
+    }
+    header {
+      background: #1f5f8b;
+      color: white;
+      padding: 16px;
+      text-align: center;
+    }
+    main {
+      max-width: 980px;
+      margin: 20px auto;
+      padding: 12px;
+    }
+    section {
+      background: white;
+      padding: 16px;
+      margin-bottom: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    input, textarea, button {
+      font-size: 16px;
+      padding: 9px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+    input, textarea {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background: #1f5f8b;
+      color: white;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    .danger {
+      background: #b3261e;
+    }
+    .hidden {
+      display: none;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .day {
+      background: #eef3f8;
+      padding: 10px;
+      min-height: 72px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      text-align: center;
+    }
+    .day:hover {
+      outline: 2px solid #1f5f8b;
+    }
+    .disabled-day {
+      background: #ddd;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .closed {
+      background: #ddd;
+      color: #777;
+      cursor: not-allowed;
+    }
+    .full {
+      background: #ffd6d6;
+      color: #777;
+      cursor: not-allowed;
+    }
+    .available {
+      background: #dff5e3;
+    }
+    .no-slots {
+      background: #eee;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .slot-button {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 12px;
+      background: #e8f1fa;
+      color: #222;
+      text-align: left;
+      border: 1px solid #b8d0e5;
+    }
+    .slot-button.selected {
+      background: #1f5f8b;
+      color: white;
+    }
+    .slot-button:disabled {
+      background: #ddd;
+      color: #888;
+    }
+    .my-reservation {
+      border: 1px solid #b8d0e5;
+      background: #f0f7ff;
+      padding: 12px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <header>
+    <h1>Perrier 予約フォーム</h1>
+  </header>
 
-<h1>Perrier 予約ページ</h1>
+  <main>
+    <section id="myReservationSection" class="hidden">
+      <h2>あなたの予約</h2>
+      <div id="myReservationBox"></div>
+    </section>
 
-<div class="card">
-  <h3>あなたの予約</h3>
-  <div id="myReservationArea">確認中です...</div>
-</div>
+    <section>
+      <h2>予約日を選択</h2>
+      <div id="calendar" class="calendar"></div>
+    </section>
 
-<div class="card">
-  <h3>予約日を選択してください</h3>
-  <p id="periodText"></p>
-  <div id="calendarArea" class="months"></div>
-</div>
+    <section id="slotSection" class="hidden">
+      <h2>時間枠を選択</h2>
+      <div id="selectedDateTitle"></div>
+      <div id="slotList"></div>
+    </section>
 
-<div class="card">
-  <h3>選択中の日付</h3>
-  <p id="selectedDateText">日付を選択してください</p>
+    <section id="formSection" class="hidden">
+      <h2>予約内容入力</h2>
+      <p id="selectedInfo"></p>
 
-  <h3>予約時間</h3>
-  <div id="slotArea">日付を選択すると時間枠が表示されます。</div>
-</div>
+      <label>お名前</label>
+      <input type="text" id="nameInput" />
 
-<div class="card">
-  <h3>お客様情報</h3>
-  <input type="text" id="customerName" placeholder="お名前">
-  <input type="tel" id="customerPhone" placeholder="電話番号">
-  <textarea id="customerMemo" rows="4" placeholder="ご要望・メモ"></textarea>
-  <button class="submit" onclick="submitReservation()">予約する</button>
-</div>
+      <label>電話番号</label>
+      <input type="tel" id="phoneInput" />
 
-</div>
+      <label>メモ</label>
+      <textarea id="memoInput" rows="4"></textarea>
 
-<script src="config.js"></script>
+      <button id="reserveButton">予約する</button>
+    </section>
+  </main>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  collection,
-  getDocs,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      addDoc,
+      updateDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const app = initializeApp(window.firebaseConfig);
-const db = getFirestore(app);
+    const app = initializeApp(window.firebaseConfig);
+    const db = getFirestore(app);
 
-let selectedDate = "";
-let selectedSlot = "";
-let periodStart = "";
-let periodEnd = "";
-let closedDates = {};
-let dailySlots = {};
-let reservedMap = {};
+    const calendar = document.getElementById("calendar");
 
-await loadAll();
-await showMyReservation();
+    const myReservationSection = document.getElementById("myReservationSection");
+    const myReservationBox = document.getElementById("myReservationBox");
 
-async function loadAll() {
-  await loadPeriod();
-  await loadClosedDates();
-  await loadDailySlots();
-  await loadReservations();
-  renderPeriodText();
-  renderCalendars();
-}
+    const slotSection = document.getElementById("slotSection");
+    const selectedDateTitle = document.getElementById("selectedDateTitle");
+    const slotList = document.getElementById("slotList");
 
-async function loadPeriod() {
-  const snap = await getDoc(doc(db, "settings", "reservationPeriod"));
-  if (snap.exists()) {
-    const data = snap.data();
-    periodStart = data.startDate || "";
-    periodEnd = data.endDate || "";
-  }
-}
+    const formSection = document.getElementById("formSection");
+    const selectedInfo = document.getElementById("selectedInfo");
 
-async function loadClosedDates() {
-  closedDates = {};
-  const snap = await getDocs(collection(db, "closedDates"));
-  snap.forEach(d => {
-    closedDates[d.id] = d.data();
-  });
-}
+    const nameInput = document.getElementById("nameInput");
+    const phoneInput = document.getElementById("phoneInput");
+    const memoInput = document.getElementById("memoInput");
+    const reserveButton = document.getElementById("reserveButton");
 
-async function loadDailySlots() {
-  dailySlots = {};
-  const snap = await getDocs(collection(db, "dailySlots"));
-  snap.forEach(d => {
-    dailySlots[d.id] = d.data();
-  });
-}
+    let reservationPeriod = null;
+    let dailySlotsMap = {};
+    let closedDatesMap = {};
+    let reservations = [];
 
-async function loadReservations() {
-  reservedMap = {};
-  const snap = await getDocs(collection(db, "reservations"));
-  snap.forEach(d => {
-    const data = d.data();
-    if (data.date && data.slot && data.status !== "cancelled") {
-      reservedMap[data.date + "_" + data.slot] = true;
-    }
-  });
-}
+    let selectedDate = "";
+    let selectedSlot = "";
 
-function renderPeriodText() {
-  const area = document.getElementById("periodText");
-  if (periodStart && periodEnd) {
-    area.textContent = `予約受付期間：${periodStart} ～ ${periodEnd}`;
-  } else {
-    area.textContent = "現在、予約受付期間が設定されていません。";
-  }
-}
+    init();
 
-function renderCalendars() {
-  const area = document.getElementById("calendarArea");
-  area.innerHTML = "";
-
-  const today = new Date();
-  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-
-  area.appendChild(createMonthCalendar(thisMonth));
-  area.appendChild(createMonthCalendar(nextMonth));
-}
-
-function createMonthCalendar(baseDate) {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-
-  const wrap = document.createElement("div");
-  wrap.className = "calendar";
-
-  const title = document.createElement("h3");
-  title.textContent = `${year}年${month + 1}月`;
-  wrap.appendChild(title);
-
-  const week = document.createElement("div");
-  week.className = "week";
-  ["日", "月", "火", "水", "木", "金", "土"].forEach(w => {
-    const div = document.createElement("div");
-    div.textContent = w;
-    week.appendChild(div);
-  });
-  wrap.appendChild(week);
-
-  const days = document.createElement("div");
-  days.className = "days";
-
-  const firstDay = new Date(year, month, 1).getDay();
-  const lastDate = new Date(year, month + 1, 0).getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    days.appendChild(document.createElement("div"));
-  }
-
-  for (let d = 1; d <= lastDate; d++) {
-    const dateStr = formatDate(year, month + 1, d);
-    const div = document.createElement("div");
-    div.className = "day";
-    div.innerHTML = `<strong>${d}</strong>`;
-
-    const slots = dailySlots[dateStr]?.slots || [];
-    const remaining = slots.filter(slot => !reservedMap[dateStr + "_" + slot]).length;
-    const allReserved = slots.length > 0 && remaining === 0;
-
-    const unavailable =
-      isPast(dateStr) ||
-      isOutsidePeriod(dateStr) ||
-      closedDates[dateStr] ||
-      slots.length === 0 ||
-      allReserved;
-
-    if (isPast(dateStr) || isOutsidePeriod(dateStr) || slots.length === 0) {
-      div.classList.add("gray");
+    async function init() {
+      await loadAllData();
+      renderMyReservation();
+      renderCalendar();
     }
 
-    if (closedDates[dateStr]) {
-      div.classList.add("closed");
-      div.innerHTML += `<div class="small">休</div>`;
-    } else if (allReserved) {
-      div.classList.add("full");
-      div.innerHTML += `<div class="small">満席</div>`;
-    } else if (slots.length > 0) {
-      div.innerHTML += `<div class="small">空き${remaining}</div>`;
+    async function loadAllData() {
+      dailySlotsMap = {};
+      closedDatesMap = {};
+      reservations = [];
+
+      const periodSnap = await getDoc(doc(db, "settings", "reservationPeriod"));
+      if (periodSnap.exists()) {
+        reservationPeriod = periodSnap.data();
+      }
+
+      const dailySnap = await getDocs(collection(db, "dailySlots"));
+      dailySnap.forEach(docSnap => {
+        dailySlotsMap[docSnap.id] = docSnap.data();
+      });
+
+      const closedSnap = await getDocs(collection(db, "closedDates"));
+      closedSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.status === "active") {
+          closedDatesMap[docSnap.id] = data;
+        }
+      });
+
+      const resSnap = await getDocs(collection(db, "reservations"));
+      resSnap.forEach(docSnap => {
+        reservations.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        });
+      });
     }
 
-    if (dateStr === selectedDate) {
-      div.classList.add("selected");
+    function renderMyReservation() {
+      const savedText = localStorage.getItem("perrierMyReservation");
+
+      if (!savedText) {
+        myReservationSection.classList.add("hidden");
+        return;
+      }
+
+      const saved = JSON.parse(savedText);
+      const latest = reservations.find(r => r.id === saved.reservationId);
+
+      myReservationSection.classList.remove("hidden");
+
+      if (!latest) {
+        myReservationBox.innerHTML = `
+          <div class="my-reservation">
+            <p>予約情報が見つかりません。</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (latest.status === "cancelled") {
+        myReservationBox.innerHTML = `
+          <div class="my-reservation">
+            <p><strong>この予約はキャンセルされました。</strong></p>
+            <p>日付：${escapeHtml(latest.date || "")}</p>
+            <p>時間：${escapeHtml(latest.slot || "")}</p>
+          </div>
+        `;
+        return;
+      }
+
+      myReservationBox.innerHTML = `
+        <div class="my-reservation">
+          <p>日付：${escapeHtml(latest.date || "")}</p>
+          <p>時間：${escapeHtml(latest.slot || "")}</p>
+          <p>名前：${escapeHtml(latest.name || "")}</p>
+          <p>電話：${escapeHtml(latest.phone || "")}</p>
+          <p>メモ：${escapeHtml(latest.memo || "")}</p>
+          <button id="cancelMyReservationButton" class="danger">この予約をキャンセル</button>
+        </div>
+      `;
+
+      document.getElementById("cancelMyReservationButton").addEventListener("click", async () => {
+        if (!confirm("この予約をキャンセルしますか？")) return;
+
+        await updateDoc(doc(db, "reservations", latest.id), {
+          status: "cancelled",
+          cancelledBy: "customer",
+          cancelledAt: serverTimestamp()
+        });
+
+        alert("予約をキャンセルしました。");
+        await loadAllData();
+        renderMyReservation();
+        renderCalendar();
+        clearSelection();
+      });
     }
 
-    if (!unavailable) {
-      div.onclick = () => selectDate(dateStr);
+    function renderCalendar() {
+      calendar.innerHTML = "";
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+
+      renderMonth(year, month);
+      renderMonth(year, month + 1);
     }
 
-    days.appendChild(div);
-  }
+    function renderMonth(year, monthIndex) {
+      const first = new Date(year, monthIndex, 1);
+      const y = first.getFullYear();
+      const m = first.getMonth();
+      const last = new Date(y, m + 1, 0);
 
-  wrap.appendChild(days);
-  return wrap;
-}
+      const title = document.createElement("h3");
+      title.textContent = `${y}年${m + 1}月`;
+      title.style.gridColumn = "1 / -1";
+      calendar.appendChild(title);
 
-function selectDate(dateStr) {
-  selectedDate = dateStr;
-  selectedSlot = "";
+      const weekNames = ["日", "月", "火", "水", "木", "金", "土"];
+      weekNames.forEach(w => {
+        const div = document.createElement("div");
+        div.textContent = w;
+        div.style.fontWeight = "bold";
+        div.style.textAlign = "center";
+        calendar.appendChild(div);
+      });
 
-  document.getElementById("selectedDateText").textContent = dateStr;
+      for (let i = 0; i < first.getDay(); i++) {
+        calendar.appendChild(document.createElement("div"));
+      }
 
-  renderCalendars();
-  renderSlots(dateStr);
-}
+      for (let d = 1; d <= last.getDate(); d++) {
+        const date = new Date(y, m, d);
+        const dateStr = formatDate(date);
+        const div = document.createElement("div");
+        div.className = "day";
 
-function renderSlots(dateStr) {
-  const area = document.getElementById("slotArea");
-  area.innerHTML = "";
+        const state = getDateState(dateStr);
+        div.innerHTML = `${d}日<br>${state.label}`;
 
-  const slots = dailySlots[dateStr]?.slots || [];
+        div.classList.add(state.className);
 
-  if (slots.length === 0) {
-    area.textContent = "この日は予約枠がありません。";
-    return;
-  }
+        if (state.canSelect) {
+          div.addEventListener("click", () => {
+            selectDate(dateStr);
+          });
+        }
 
-  slots.forEach(slot => {
-    const key = dateStr + "_" + slot;
-    const btn = document.createElement("button");
-    btn.className = "slot-button";
+        calendar.appendChild(div);
+      }
+    }
 
-    if (reservedMap[key]) {
-      btn.textContent = slot + "（予約済み）";
-      btn.disabled = true;
-      btn.classList.add("disabled");
-    } else {
-      btn.textContent = slot;
-      btn.onclick = () => {
-        selectedSlot = slot;
-        renderSlots(dateStr);
+    function getDateState(dateStr) {
+      const todayStr = formatDate(new Date());
+
+      if (dateStr < todayStr) {
+        return {
+          label: "受付終了",
+          className: "disabled-day",
+          canSelect: false
+        };
+      }
+
+      if (reservationPeriod) {
+        if (reservationPeriod.startDate && dateStr < reservationPeriod.startDate) {
+          return {
+            label: "受付前",
+            className: "disabled-day",
+            canSelect: false
+          };
+        }
+
+        if (reservationPeriod.endDate && dateStr > reservationPeriod.endDate) {
+          return {
+            label: "受付外",
+            className: "disabled-day",
+            canSelect: false
+          };
+        }
+      }
+
+      if (closedDatesMap[dateStr]) {
+        return {
+          label: "休業",
+          className: "closed",
+          canSelect: false
+        };
+      }
+
+      const slots = dailySlotsMap[dateStr]?.slots || [];
+
+      if (slots.length === 0) {
+        return {
+          label: "枠なし",
+          className: "no-slots",
+          canSelect: false
+        };
+      }
+
+      const totalCapacity = slots.reduce((sum, slot) => {
+        return sum + Number(slot.capacity || 0);
+      }, 0);
+
+      const activeCount = reservations.filter(r => {
+        return r.date === dateStr && r.status !== "cancelled";
+      }).length;
+
+      const remain = totalCapacity - activeCount;
+
+      if (remain <= 0) {
+        return {
+          label: "満席",
+          className: "full",
+          canSelect: false
+        };
+      }
+
+      return {
+        label: `空き ${remain}名`,
+        className: "available",
+        canSelect: true
       };
     }
 
-    if (slot === selectedSlot) {
-      btn.classList.add("selected");
+    function selectDate(dateStr) {
+      selectedDate = dateStr;
+      selectedSlot = "";
+
+      selectedDateTitle.innerHTML = `<p><strong>${dateStr}</strong></p>`;
+      slotList.innerHTML = "";
+
+      const slots = dailySlotsMap[dateStr]?.slots || [];
+
+      slots.forEach(slot => {
+        const activeCount = reservations.filter(r => {
+          return r.date === dateStr &&
+                 r.slot === slot.time &&
+                 r.status !== "cancelled";
+        }).length;
+
+        const capacity = Number(slot.capacity || 0);
+        const remain = capacity - activeCount;
+
+        const button = document.createElement("button");
+        button.className = "slot-button";
+
+        if (remain <= 0) {
+          button.textContent = `${slot.time}　満席`;
+          button.disabled = true;
+        } else {
+          button.textContent = `${slot.time}　残り ${remain}名`;
+          button.addEventListener("click", () => {
+            selectedSlot = slot.time;
+            document.querySelectorAll(".slot-button").forEach(btn => {
+              btn.classList.remove("selected");
+            });
+            button.classList.add("selected");
+            showForm();
+          });
+        }
+
+        slotList.appendChild(button);
+      });
+
+      slotSection.classList.remove("hidden");
+      formSection.classList.add("hidden");
     }
 
-    area.appendChild(btn);
-  });
-}
+    function showForm() {
+      selectedInfo.textContent = `予約日：${selectedDate}　時間：${selectedSlot}`;
+      formSection.classList.remove("hidden");
+    }
 
-window.submitReservation = async function() {
-  const name = document.getElementById("customerName").value.trim();
-  const phone = document.getElementById("customerPhone").value.trim();
-  const memo = document.getElementById("customerMemo").value.trim();
+    reserveButton.addEventListener("click", async () => {
+      if (!selectedDate || !selectedSlot) {
+        alert("日付と時間枠を選択してください。");
+        return;
+      }
 
-  if (!selectedDate) {
-    alert("予約日を選択してください");
-    return;
-  }
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const memo = memoInput.value.trim();
 
-  if (!selectedSlot) {
-    alert("予約時間を選択してください");
-    return;
-  }
+      if (!name || !phone) {
+        alert("お名前と電話番号を入力してください。");
+        return;
+      }
 
-  if (!name) {
-    alert("お名前を入力してください");
-    return;
-  }
+      const slotInfo = (dailySlotsMap[selectedDate]?.slots || []).find(s => s.time === selectedSlot);
 
-  const reservationId = selectedDate + "_" + safeId(selectedSlot);
-  const ref = doc(db, "reservations", reservationId);
-  const snap = await getDoc(ref);
+      if (!slotInfo) {
+        alert("選択した時間枠が見つかりません。");
+        await loadAllData();
+        renderCalendar();
+        clearSelection();
+        return;
+      }
 
-  if (snap.exists() && snap.data().status !== "cancelled") {
-    alert("この時間枠はすでに予約されています。");
-    await loadAll();
-    renderSlots(selectedDate);
-    return;
-  }
+      const activeCount = reservations.filter(r => {
+        return r.date === selectedDate &&
+               r.slot === selectedSlot &&
+               r.status !== "cancelled";
+      }).length;
 
-  await setDoc(ref, {
-    date: selectedDate,
-    slot: selectedSlot,
-    name: name,
-    phone: phone,
-    memo: memo,
-    status: "reserved",
-    createdAt: serverTimestamp(),
-    cancelledAt: null,
-    cancelledBy: null
-  });
+      const remain = Number(slotInfo.capacity || 0) - activeCount;
 
-  const myReservation = {
-    reservationId,
-    date: selectedDate,
-    slot: selectedSlot,
-    name,
-    phone,
-    memo
-  };
+      if (remain <= 0) {
+        alert("この時間枠は満席になりました。別の時間を選択してください。");
+        await loadAllData();
+        renderCalendar();
+        selectDate(selectedDate);
+        return;
+      }
 
-  localStorage.setItem("perrierMyReservation", JSON.stringify(myReservation));
+      reserveButton.disabled = true;
 
-  alert("予約を受け付けました。");
+      try {
+        const docRef = await addDoc(collection(db, "reservations"), {
+          date: selectedDate,
+          slot: selectedSlot,
+          name,
+          phone,
+          memo,
+          status: "active",
+          createdAt: serverTimestamp(),
+          cancelledAt: null,
+          cancelledBy: ""
+        });
 
-  document.getElementById("customerName").value = "";
-  document.getElementById("customerPhone").value = "";
-  document.getElementById("customerMemo").value = "";
+        localStorage.setItem("perrierMyReservation", JSON.stringify({
+          reservationId: docRef.id,
+          date: selectedDate,
+          slot: selectedSlot,
+          name,
+          phone,
+          memo
+        }));
 
-  selectedDate = "";
-  selectedSlot = "";
+        alert("予約を受け付けました。");
 
-  await loadAll();
-  await showMyReservation();
+        nameInput.value = "";
+        phoneInput.value = "";
+        memoInput.value = "";
 
-  document.getElementById("selectedDateText").textContent = "日付を選択してください";
-  document.getElementById("slotArea").textContent = "日付を選択すると時間枠が表示されます。";
-};
+        await loadAllData();
+        renderMyReservation();
+        renderCalendar();
+        clearSelection();
 
-window.cancelMyReservation = async function() {
-  const saved = localStorage.getItem("perrierMyReservation");
+      } catch (error) {
+        console.error(error);
+        alert("予約の保存に失敗しました。");
+      } finally {
+        reserveButton.disabled = false;
+      }
+    });
 
-  if (!saved) {
-    alert("この端末に予約情報がありません。");
-    return;
-  }
+    function clearSelection() {
+      selectedDate = "";
+      selectedSlot = "";
+      slotSection.classList.add("hidden");
+      formSection.classList.add("hidden");
+      slotList.innerHTML = "";
+      selectedInfo.textContent = "";
+    }
 
-  const data = JSON.parse(saved);
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
 
-  if (!data.reservationId) {
-    alert("予約IDが確認できません。店舗へお問い合わせください。");
-    return;
-  }
-
-  if (!confirm("この予約をキャンセルしますか？")) {
-    return;
-  }
-
-  await updateDoc(doc(db, "reservations", data.reservationId), {
-    status: "cancelled",
-    cancelledAt: serverTimestamp(),
-    cancelledBy: "customer"
-  });
-
-  alert("予約をキャンセルしました。");
-
-  await loadAll();
-  await showMyReservation();
-
-  document.getElementById("selectedDateText").textContent = "日付を選択してください";
-  document.getElementById("slotArea").textContent = "日付を選択すると時間枠が表示されます。";
-};
-
-async function showMyReservation() {
-  const area = document.getElementById("myReservationArea");
-  const saved = localStorage.getItem("perrierMyReservation");
-
-  if (!saved) {
-    area.textContent = "現在この端末に保存されている予約はありません。";
-    return;
-  }
-
-  const data = JSON.parse(saved);
-
-  if (!data.reservationId) {
-    area.innerHTML = `
-      <div class="my-reservation">
-        <strong>予約日時</strong><br>
-        ${data.date}　${data.slot}<br>
-        <strong>お名前</strong><br>
-        ${data.name || ""}<br>
-        <strong>電話番号</strong><br>
-        ${data.phone || ""}
-      </div>
-    `;
-    return;
-  }
-
-  const snap = await getDoc(doc(db, "reservations", data.reservationId));
-
-  if (!snap.exists()) {
-    area.innerHTML = `
-      <div class="cancelled-reservation">
-        <strong>予約は確認できませんでした。</strong><br>
-        店舗へお問い合わせください。
-      </div>
-    `;
-    return;
-  }
-
-  const latest = snap.data();
-
-  if (latest.status === "cancelled") {
-    area.innerHTML = `
-      <div class="cancelled-reservation">
-        <strong>この予約はキャンセルされました。</strong><br>
-        予約日時：${latest.date || data.date}　${latest.slot || data.slot}<br>
-        必要な場合は、再度ご予約ください。
-      </div>
-    `;
-    return;
-  }
-
-  area.innerHTML = `
-    <div class="my-reservation">
-      <strong>予約日時</strong><br>
-      ${latest.date || data.date}　${latest.slot || data.slot}<br>
-      <strong>お名前</strong><br>
-      ${latest.name || data.name || ""}<br>
-      <strong>電話番号</strong><br>
-      ${latest.phone || data.phone || ""}<br>
-      <button class="cancel-btn" onclick="cancelMyReservation()">この予約をキャンセル</button>
-    </div>
-  `;
-}
-
-function formatDate(year, month, day) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function isPast(dateStr) {
-  const today = new Date();
-  const todayStr = formatDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
-  return dateStr < todayStr;
-}
-
-function isOutsidePeriod(dateStr) {
-  if (!periodStart || !periodEnd) return true;
-  return dateStr < periodStart || dateStr > periodEnd;
-}
-
-function safeId(text) {
-  return text.replace(/[\/\\.#$[\]〜:：\s]/g, "_");
-}
-</script>
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
 </body>
 </html>

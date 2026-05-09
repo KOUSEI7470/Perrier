@@ -1,586 +1,544 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Perrier 管理画面</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body {
-  margin: 0;
-  font-family: "Yu Gothic", sans-serif;
-  background: linear-gradient(135deg,#10281f,#1f4d3a);
-}
-.container {
-  max-width: 950px;
-  margin: 20px auto;
-  background: #fffaf0;
-  padding: 20px;
-  border-radius: 20px;
-}
-h1, h2, h3 { color: #1f4d3a; }
-.card {
-  background: white;
-  padding: 15px;
-  margin-top: 20px;
-  border-radius: 15px;
-}
-input, textarea, button {
-  box-sizing: border-box;
-  font-size: 16px;
-}
-input, textarea {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-}
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  background: #1f4d3a;
-  color: white;
-  border: none;
-  border-radius: 10px;
-}
-.cancel-btn {
-  background: #9b2c2c;
-}
-.months {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-.calendar {
-  background: #fff;
-  padding: 10px;
-  border-radius: 12px;
-}
-.week, .days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-.week div {
-  text-align: center;
-  font-weight: bold;
-}
-.day {
-  min-height: 56px;
-  padding: 5px;
-  border-radius: 8px;
-  background: #eef4ef;
-  cursor: pointer;
-  text-align: center;
-}
-.day.gray {
-  background: #ccc;
-  color: #777;
-}
-.day.hasSlots {
-  background: #bfe6c8;
-}
-.day.full {
-  background: #999;
-  color: white;
-}
-.day.closed {
-  background: #e88;
-  color: white;
-}
-.day.selected {
-  outline: 3px solid #1f4d3a;
-}
-.small {
-  font-size: 12px;
-}
-.list-item {
-  padding: 10px;
-  margin-top: 8px;
-  border-radius: 8px;
-}
-.empty {
-  background: #e8f5e9;
-}
-.reserved {
-  background: #ffe1e1;
-}
-.cancelled {
-  background: #ffd6d6;
-}
-.closed-box {
-  background: #ffd6d6;
-}
-.summary {
-  background: #f3f3f3;
-}
-@media (max-width: 700px) {
-  .months {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perrier 予約管理</title>
+  <script src="./config.js"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      background: #f4f7fb;
+      color: #222;
+    }
+    header {
+      background: #1f5f8b;
+      color: white;
+      padding: 16px;
+      text-align: center;
+    }
+    main {
+      max-width: 980px;
+      margin: 20px auto;
+      padding: 12px;
+    }
+    section {
+      background: white;
+      padding: 16px;
+      margin-bottom: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    input, button, textarea {
+      font-size: 16px;
+      padding: 8px;
+      margin: 4px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background: #1f5f8b;
+      color: white;
+    }
+    button.danger {
+      background: #b3261e;
+    }
+    button.gray {
+      background: #777;
+    }
+    .hidden {
+      display: none;
+    }
+    .slot-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding: 8px 0;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .day {
+      background: #eef3f8;
+      padding: 10px;
+      min-height: 70px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .day:hover {
+      outline: 2px solid #1f5f8b;
+    }
+    .closed {
+      background: #ddd;
+    }
+    .full {
+      background: #ffd6d6;
+    }
+    .available {
+      background: #dff5e3;
+    }
+    .no-slots {
+      background: #eee;
+    }
+    .reservation-card {
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 8px 0;
+      background: #fafafa;
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <header>
+    <h1>Perrier 予約管理</h1>
+  </header>
 
-<div id="loginScreen">
-  <h2>管理者ログイン</h2>
-  <input type="password" id="adminPass" placeholder="パスワード">
-  <button onclick="login()">ログイン</button>
-</div>
+  <main>
+    <section id="loginSection">
+      <h2>管理ログイン</h2>
+      <input type="password" id="passwordInput" placeholder="パスワード" />
+      <button id="loginButton">ログイン</button>
+    </section>
 
-<div id="adminContent" style="display:none;">
+    <div id="adminArea" class="hidden">
+      <section>
+        <h2>受付期間設定</h2>
+        <input type="date" id="startDate" />
+        <input type="date" id="endDate" />
+        <button id="savePeriodButton">保存</button>
+      </section>
 
-<h1>Perrier 管理画面</h1>
+      <section>
+        <h2>日別時間枠・対応人数設定</h2>
+        <p>日付ごとに、時間枠と対応人数を設定できます。</p>
+        <input type="date" id="slotDate" />
+        <button id="loadSlotsButton">読み込み</button>
+        <div id="slotsArea"></div>
+        <button id="addSlotButton">時間枠を追加</button>
+        <button id="saveSlotsButton">この日の時間枠を保存</button>
+      </section>
 
-<div class="card">
-  <h3>キャンセル履歴</h3>
-  <div id="cancelHistoryArea">読み込み中...</div>
-</div>
+      <section>
+        <h2>休業日設定</h2>
+        <input type="date" id="closedDate" />
+        <input type="text" id="closedReason" placeholder="理由" />
+        <button id="saveClosedButton">休業日にする</button>
+      </section>
 
-<div class="card">
-  <h3>予約受付期間</h3>
-  <label>受付開始日</label>
-  <input type="date" id="periodStart">
-  <label>受付終了日</label>
-  <input type="date" id="periodEnd">
-  <button onclick="savePeriod()">受付期間を保存</button>
-</div>
+      <section>
+        <h2>キャンセル履歴</h2>
+        <div id="cancelHistory"></div>
+      </section>
 
-<div class="card">
-  <h3>予約可能日・予約状況カレンダー</h3>
-  <p>日付をクリックすると、その日の予約状況を確認できます。</p>
-  <div id="calendarArea" class="months"></div>
-</div>
+      <section>
+        <h2>予約カレンダー</h2>
+        <div id="calendar"></div>
+      </section>
 
-<div class="card">
-  <h3>選択中の日付</h3>
-  <p id="selectedDateText">日付を選択してください</p>
+      <section>
+        <h2>選択日の予約</h2>
+        <div id="selectedDateInfo"></div>
+        <div id="reservationList"></div>
+      </section>
+    </div>
+  </main>
 
-  <h3>この日の予約時間枠</h3>
-  <p class="small">1行に1枠ずつ入力してください。例：10:00〜10:30</p>
-  <textarea id="slotText" rows="6" placeholder="10:00〜10:30&#10;10:45〜11:15"></textarea>
-  <button onclick="saveSlots()">この日の時間枠を保存</button>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      getDoc,
+      getDocs,
+      setDoc,
+      updateDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <h3>休業日設定</h3>
-  <input type="text" id="closedReason" placeholder="休業理由">
-  <button onclick="saveClosedDate()">この日を休業日にする</button>
-  <button onclick="deleteClosedDate()">休業日を解除する</button>
-</div>
+    const app = initializeApp(window.firebaseConfig);
+    const db = getFirestore(app);
 
-<div class="card">
-  <h3>選択日の予約状況</h3>
-  <div id="reservationStatusArea">日付を選択してください。</div>
-</div>
+    const loginSection = document.getElementById("loginSection");
+    const adminArea = document.getElementById("adminArea");
 
-</div>
-</div>
+    const passwordInput = document.getElementById("passwordInput");
+    const loginButton = document.getElementById("loginButton");
 
-<script src="config.js"></script>
+    const startDate = document.getElementById("startDate");
+    const endDate = document.getElementById("endDate");
+    const savePeriodButton = document.getElementById("savePeriodButton");
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  getDocs,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+    const slotDate = document.getElementById("slotDate");
+    const loadSlotsButton = document.getElementById("loadSlotsButton");
+    const slotsArea = document.getElementById("slotsArea");
+    const addSlotButton = document.getElementById("addSlotButton");
+    const saveSlotsButton = document.getElementById("saveSlotsButton");
 
-const app = initializeApp(window.firebaseConfig);
-const db = getFirestore(app);
+    const closedDate = document.getElementById("closedDate");
+    const closedReason = document.getElementById("closedReason");
+    const saveClosedButton = document.getElementById("saveClosedButton");
 
-let selectedDate = "";
-let periodStart = "";
-let periodEnd = "";
-let closedDates = {};
-let dailySlots = {};
-let reservations = {};
-let cancelledReservations = [];
+    const cancelHistory = document.getElementById("cancelHistory");
+    const calendar = document.getElementById("calendar");
+    const selectedDateInfo = document.getElementById("selectedDateInfo");
+    const reservationList = document.getElementById("reservationList");
 
-window.login = async function() {
-  const pass = document.getElementById("adminPass").value;
+    let dailySlotsMap = {};
+    let closedDatesMap = {};
+    let reservations = [];
 
-  if (pass === "yoshi") {
-    document.getElementById("loginScreen").style.display = "none";
-    document.getElementById("adminContent").style.display = "block";
-    await loadAll();
-  } else {
-    alert("パスワードが違います");
-  }
-};
-
-async function loadAll() {
-  await loadPeriod();
-  await loadClosedDates();
-  await loadDailySlots();
-  await loadReservations();
-  renderCancelHistory();
-  renderCalendars();
-
-  if (selectedDate) {
-    renderReservationStatus(selectedDate);
-  }
-}
-
-async function loadPeriod() {
-  const snap = await getDoc(doc(db, "settings", "reservationPeriod"));
-  if (snap.exists()) {
-    const data = snap.data();
-    periodStart = data.startDate || "";
-    periodEnd = data.endDate || "";
-    document.getElementById("periodStart").value = periodStart;
-    document.getElementById("periodEnd").value = periodEnd;
-  }
-}
-
-async function loadClosedDates() {
-  closedDates = {};
-  const snap = await getDocs(collection(db, "closedDates"));
-  snap.forEach(d => closedDates[d.id] = d.data());
-}
-
-async function loadDailySlots() {
-  dailySlots = {};
-  const snap = await getDocs(collection(db, "dailySlots"));
-  snap.forEach(d => dailySlots[d.id] = d.data());
-}
-
-async function loadReservations() {
-  reservations = {};
-  cancelledReservations = [];
-
-  const snap = await getDocs(collection(db, "reservations"));
-
-  snap.forEach(d => {
-    const data = {
-      id: d.id,
-      ...d.data()
-    };
-
-    if (!data.date) return;
-
-    if (data.status === "cancelled") {
-      cancelledReservations.push(data);
-      return;
-    }
-
-    if (!reservations[data.date]) {
-      reservations[data.date] = [];
-    }
-
-    reservations[data.date].push(data);
-  });
-}
-
-window.savePeriod = async function() {
-  periodStart = document.getElementById("periodStart").value;
-  periodEnd = document.getElementById("periodEnd").value;
-
-  if (!periodStart || !periodEnd) {
-    alert("受付開始日と終了日を入力してください");
-    return;
-  }
-
-  await setDoc(doc(db, "settings", "reservationPeriod"), {
-    startDate: periodStart,
-    endDate: periodEnd
-  });
-
-  alert("受付期間を保存しました");
-  await loadAll();
-};
-
-window.saveSlots = async function() {
-  if (!selectedDate) {
-    alert("日付を選択してください");
-    return;
-  }
-
-  const slots = document.getElementById("slotText").value
-    .split("\n")
-    .map(s => s.trim())
-    .filter(s => s !== "");
-
-  await setDoc(doc(db, "dailySlots", selectedDate), {
-    date: selectedDate,
-    slots: slots
-  });
-
-  alert("時間枠を保存しました");
-  await loadAll();
-  selectDate(selectedDate);
-};
-
-window.saveClosedDate = async function() {
-  if (!selectedDate) {
-    alert("日付を選択してください");
-    return;
-  }
-
-  const reason = document.getElementById("closedReason").value || "休業日";
-
-  await setDoc(doc(db, "closedDates", selectedDate), {
-    date: selectedDate,
-    reason: reason,
-    status: "active"
-  });
-
-  alert("休業日を登録しました");
-  await loadAll();
-  selectDate(selectedDate);
-};
-
-window.deleteClosedDate = async function() {
-  if (!selectedDate) {
-    alert("日付を選択してください");
-    return;
-  }
-
-  await deleteDoc(doc(db, "closedDates", selectedDate));
-
-  alert("休業日を解除しました");
-  await loadAll();
-  selectDate(selectedDate);
-};
-
-window.cancelReservation = async function(reservationId) {
-  if (!confirm("この予約をキャンセル扱いにしますか？")) {
-    return;
-  }
-
-  await updateDoc(doc(db, "reservations", reservationId), {
-    status: "cancelled",
-    cancelledAt: serverTimestamp(),
-    cancelledBy: "admin"
-  });
-
-  alert("予約をキャンセルしました");
-
-  await loadAll();
-
-  if (selectedDate) {
-    selectDate(selectedDate);
-  }
-};
-
-function renderCancelHistory() {
-  const area = document.getElementById("cancelHistoryArea");
-  area.innerHTML = "";
-
-  if (cancelledReservations.length === 0) {
-    area.textContent = "キャンセル履歴はありません。";
-    return;
-  }
-
-  cancelledReservations
-    .sort((a, b) => {
-      const ad = a.date || "";
-      const bd = b.date || "";
-      if (ad !== bd) return bd.localeCompare(ad);
-      return (b.slot || "").localeCompare(a.slot || "");
-    })
-    .slice(0, 10)
-    .forEach(r => {
-      const div = document.createElement("div");
-      div.className = "list-item cancelled";
-
-      const byText = r.cancelledBy === "customer"
-        ? "お客様"
-        : r.cancelledBy === "admin"
-          ? "管理者"
-          : "不明";
-
-      div.innerHTML = `
-        <strong>${r.date || ""}　${r.slot || ""}</strong><br>
-        お名前：${r.name || ""}<br>
-        電話番号：${r.phone || ""}<br>
-        キャンセル者：${byText}
-      `;
-
-      area.appendChild(div);
+    loginButton.addEventListener("click", async () => {
+      if (passwordInput.value === "yoshi") {
+        loginSection.classList.add("hidden");
+        adminArea.classList.remove("hidden");
+        await initAdmin();
+      } else {
+        alert("パスワードが違います。");
+      }
     });
-}
 
-function renderCalendars() {
-  const area = document.getElementById("calendarArea");
-  area.innerHTML = "";
-
-  const today = new Date();
-  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-
-  area.appendChild(createMonthCalendar(thisMonth));
-  area.appendChild(createMonthCalendar(nextMonth));
-}
-
-function createMonthCalendar(baseDate) {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-
-  const wrap = document.createElement("div");
-  wrap.className = "calendar";
-
-  const title = document.createElement("h3");
-  title.textContent = `${year}年${month + 1}月`;
-  wrap.appendChild(title);
-
-  const week = document.createElement("div");
-  week.className = "week";
-  ["日", "月", "火", "水", "木", "金", "土"].forEach(w => {
-    const div = document.createElement("div");
-    div.textContent = w;
-    week.appendChild(div);
-  });
-  wrap.appendChild(week);
-
-  const days = document.createElement("div");
-  days.className = "days";
-
-  const firstDay = new Date(year, month, 1).getDay();
-  const lastDate = new Date(year, month + 1, 0).getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    days.appendChild(document.createElement("div"));
-  }
-
-  for (let d = 1; d <= lastDate; d++) {
-    const dateStr = formatDate(year, month + 1, d);
-    const div = document.createElement("div");
-    div.className = "day";
-    div.innerHTML = `<strong>${d}</strong>`;
-
-    const slots = dailySlots[dateStr]?.slots || [];
-    const dayReservations = reservations[dateStr] || [];
-    const reservedCount = slots.filter(slot =>
-      dayReservations.some(r => r.slot === slot)
-    ).length;
-
-    const allReserved = slots.length > 0 && reservedCount >= slots.length;
-
-    if (isPast(dateStr) || isOutsidePeriod(dateStr)) {
-      div.classList.add("gray");
+    async function initAdmin() {
+      await loadPeriod();
+      await loadAllData();
+      renderCalendar();
+      renderCancelHistory();
     }
 
-    if (closedDates[dateStr]) {
-      div.classList.add("closed");
-      div.innerHTML += `<div class="small">休業</div>`;
-    } else if (allReserved) {
-      div.classList.add("full");
-      div.innerHTML += `<div class="small">満席</div>`;
-    } else if (slots.length > 0) {
-      div.classList.add("hasSlots");
-      div.innerHTML += `<div class="small">空き${slots.length - reservedCount}</div>`;
-    } else {
-      div.innerHTML += `<div class="small">枠なし</div>`;
+    async function loadPeriod() {
+      const ref = doc(db, "settings", "reservationPeriod");
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        startDate.value = data.startDate || "";
+        endDate.value = data.endDate || "";
+      }
     }
 
-    if (dateStr === selectedDate) {
-      div.classList.add("selected");
-    }
+    savePeriodButton.addEventListener("click", async () => {
+      await setDoc(doc(db, "settings", "reservationPeriod"), {
+        startDate: startDate.value,
+        endDate: endDate.value
+      });
+      alert("受付期間を保存しました。");
+      await loadAllData();
+      renderCalendar();
+    });
 
-    div.onclick = () => selectDate(dateStr);
-    days.appendChild(div);
-  }
+    loadSlotsButton.addEventListener("click", async () => {
+      if (!slotDate.value) {
+        alert("日付を選択してください。");
+        return;
+      }
 
-  wrap.appendChild(days);
-  return wrap;
-}
+      const ref = doc(db, "dailySlots", slotDate.value);
+      const snap = await getDoc(ref);
 
-function selectDate(dateStr) {
-  selectedDate = dateStr;
+      slotsArea.innerHTML = "";
 
-  document.getElementById("selectedDateText").textContent = dateStr;
+      if (snap.exists() && Array.isArray(snap.data().slots)) {
+        snap.data().slots.forEach(slot => addSlotRow(slot.time, slot.capacity));
+      } else {
+        addSlotRow("", 1);
+      }
+    });
 
-  const slots = dailySlots[dateStr]?.slots || [];
-  document.getElementById("slotText").value = slots.join("\n");
+    addSlotButton.addEventListener("click", () => {
+      addSlotRow("", 1);
+    });
 
-  const reason = closedDates[dateStr]?.reason || "";
-  document.getElementById("closedReason").value = reason;
+    function addSlotRow(time = "", capacity = 1) {
+      const row = document.createElement("div");
+      row.className = "slot-row";
 
-  renderCalendars();
-  renderReservationStatus(dateStr);
-}
-
-function renderReservationStatus(dateStr) {
-  const area = document.getElementById("reservationStatusArea");
-  area.innerHTML = "";
-
-  const slots = dailySlots[dateStr]?.slots || [];
-  const dayReservations = reservations[dateStr] || [];
-
-  if (closedDates[dateStr]) {
-    const div = document.createElement("div");
-    div.className = "list-item closed-box";
-    div.innerHTML = `<strong>休業日</strong><br>${closedDates[dateStr].reason || ""}`;
-    area.appendChild(div);
-  }
-
-  if (slots.length === 0) {
-    const div = document.createElement("div");
-    div.className = "list-item summary";
-    div.textContent = "この日は予約時間枠が登録されていません。";
-    area.appendChild(div);
-    return;
-  }
-
-  const reservedCount = slots.filter(slot =>
-    dayReservations.some(r => r.slot === slot)
-  ).length;
-
-  const summary = document.createElement("div");
-  summary.className = "list-item summary";
-  summary.innerHTML = `
-    <strong>予約状況</strong><br>
-    全${slots.length}枠 / 予約済み${reservedCount}枠 / 空き${slots.length - reservedCount}枠
-  `;
-  area.appendChild(summary);
-
-  slots.forEach(slot => {
-    const found = dayReservations.find(r => r.slot === slot);
-
-    const div = document.createElement("div");
-    div.className = "list-item " + (found ? "reserved" : "empty");
-
-    if (found) {
-      div.innerHTML = `
-        <strong>${slot}：予約あり</strong><br>
-        お名前：${found.name || ""}<br>
-        電話番号：${found.phone || ""}<br>
-        メモ：${found.memo || ""}<br>
-        <button class="cancel-btn" onclick="cancelReservation('${found.id}')">この予約をキャンセル</button>
+      row.innerHTML = `
+        <span>時間枠</span>
+        <input type="text" class="slot-time" placeholder="例 10:00-10:30" value="${time}">
+        <span>対応人数</span>
+        <input type="number" class="slot-capacity" min="1" value="${capacity}">
+        <button type="button" class="danger remove-slot">削除</button>
       `;
-    } else {
-      div.innerHTML = `<strong>${slot}：空き</strong>`;
+
+      row.querySelector(".remove-slot").addEventListener("click", () => {
+        row.remove();
+      });
+
+      slotsArea.appendChild(row);
     }
 
-    area.appendChild(div);
-  });
-}
+    saveSlotsButton.addEventListener("click", async () => {
+      if (!slotDate.value) {
+        alert("日付を選択してください。");
+        return;
+      }
 
-function formatDate(year, month, day) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
+      const rows = slotsArea.querySelectorAll(".slot-row");
+      const slots = [];
 
-function isPast(dateStr) {
-  const today = new Date();
-  const todayStr = formatDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
-  return dateStr < todayStr;
-}
+      rows.forEach(row => {
+        const time = row.querySelector(".slot-time").value.trim();
+        const capacity = Number(row.querySelector(".slot-capacity").value);
 
-function isOutsidePeriod(dateStr) {
-  if (!periodStart || !periodEnd) return false;
-  return dateStr < periodStart || dateStr > periodEnd;
-}
-</script>
+        if (time && capacity > 0) {
+          slots.push({ time, capacity });
+        }
+      });
+
+      await setDoc(doc(db, "dailySlots", slotDate.value), {
+        date: slotDate.value,
+        slots
+      });
+
+      alert("時間枠と対応人数を保存しました。");
+      await loadAllData();
+      renderCalendar();
+    });
+
+    saveClosedButton.addEventListener("click", async () => {
+      if (!closedDate.value) {
+        alert("日付を選択してください。");
+        return;
+      }
+
+      await setDoc(doc(db, "closedDates", closedDate.value), {
+        date: closedDate.value,
+        reason: closedReason.value,
+        status: "active"
+      });
+
+      alert("休業日を保存しました。");
+      closedReason.value = "";
+      await loadAllData();
+      renderCalendar();
+    });
+
+    async function loadAllData() {
+      dailySlotsMap = {};
+      closedDatesMap = {};
+      reservations = [];
+
+      const dailySnap = await getDocs(collection(db, "dailySlots"));
+      dailySnap.forEach(docSnap => {
+        dailySlotsMap[docSnap.id] = docSnap.data();
+      });
+
+      const closedSnap = await getDocs(collection(db, "closedDates"));
+      closedSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.status === "active") {
+          closedDatesMap[docSnap.id] = data;
+        }
+      });
+
+      const resSnap = await getDocs(collection(db, "reservations"));
+      resSnap.forEach(docSnap => {
+        reservations.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        });
+      });
+    }
+
+    function renderCalendar() {
+      calendar.innerHTML = "";
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+
+      renderMonth(year, month);
+      renderMonth(year, month + 1);
+    }
+
+    function renderMonth(year, monthIndex) {
+      const first = new Date(year, monthIndex, 1);
+      const y = first.getFullYear();
+      const m = first.getMonth();
+      const last = new Date(y, m + 1, 0);
+
+      const title = document.createElement("h3");
+      title.textContent = `${y}年${m + 1}月`;
+      title.style.gridColumn = "1 / -1";
+      calendar.appendChild(title);
+
+      const weekNames = ["日", "月", "火", "水", "木", "金", "土"];
+      weekNames.forEach(w => {
+        const div = document.createElement("div");
+        div.textContent = w;
+        div.style.fontWeight = "bold";
+        div.style.textAlign = "center";
+        calendar.appendChild(div);
+      });
+
+      for (let i = 0; i < first.getDay(); i++) {
+        calendar.appendChild(document.createElement("div"));
+      }
+
+      for (let d = 1; d <= last.getDate(); d++) {
+        const dateStr = formatDate(new Date(y, m, d));
+        const div = document.createElement("div");
+        div.className = "day";
+        div.dataset.date = dateStr;
+
+        const slots = dailySlotsMap[dateStr]?.slots || [];
+        const activeReservations = reservations.filter(r =>
+          r.date === dateStr && r.status !== "cancelled"
+        );
+
+        const totalCapacity = slots.reduce((sum, s) => sum + Number(s.capacity || 0), 0);
+        const reservedCount = activeReservations.length;
+        const remain = totalCapacity - reservedCount;
+
+        let label = `${d}日`;
+
+        if (closedDatesMap[dateStr]) {
+          div.classList.add("closed");
+          label += `<br>休業`;
+        } else if (slots.length === 0) {
+          div.classList.add("no-slots");
+          label += `<br>枠なし`;
+        } else if (remain <= 0) {
+          div.classList.add("full");
+          label += `<br>満席`;
+        } else {
+          div.classList.add("available");
+          label += `<br>空き ${remain}`;
+        }
+
+        div.innerHTML = label;
+
+        div.addEventListener("click", () => {
+          showReservations(dateStr);
+        });
+
+        calendar.appendChild(div);
+      }
+    }
+
+    function showReservations(dateStr) {
+      const slots = dailySlotsMap[dateStr]?.slots || [];
+      const activeReservations = reservations.filter(r =>
+        r.date === dateStr && r.status !== "cancelled"
+      );
+      const cancelledReservations = reservations.filter(r =>
+        r.date === dateStr && r.status === "cancelled"
+      );
+
+      const totalCapacity = slots.reduce((sum, s) => sum + Number(s.capacity || 0), 0);
+
+      selectedDateInfo.innerHTML = `
+        <h3>${dateStr}</h3>
+        <p>全枠数：${totalCapacity}</p>
+        <p>予約済み：${activeReservations.length}</p>
+        <p>空き：${Math.max(totalCapacity - activeReservations.length, 0)}</p>
+        <p>キャンセル：${cancelledReservations.length}</p>
+      `;
+
+      reservationList.innerHTML = "";
+
+      slots.forEach(slot => {
+        const slotReservations = activeReservations.filter(r => r.slot === slot.time);
+        const remain = Number(slot.capacity) - slotReservations.length;
+
+        const slotTitle = document.createElement("h4");
+        slotTitle.textContent = `${slot.time}　定員 ${slot.capacity}名 / 予約 ${slotReservations.length}名 / 残り ${Math.max(remain, 0)}名`;
+        reservationList.appendChild(slotTitle);
+
+        if (slotReservations.length === 0) {
+          const p = document.createElement("p");
+          p.textContent = "予約なし";
+          reservationList.appendChild(p);
+        }
+
+        slotReservations.forEach(r => {
+          const card = document.createElement("div");
+          card.className = "reservation-card";
+
+          card.innerHTML = `
+            <div><strong>${r.slot}</strong></div>
+            <div>名前：${escapeHtml(r.name || "")}</div>
+            <div>電話：${escapeHtml(r.phone || "")}</div>
+            <div>メモ：${escapeHtml(r.memo || "")}</div>
+            <button class="danger">この予約をキャンセル</button>
+          `;
+
+          card.querySelector("button").addEventListener("click", async () => {
+            if (!confirm("この予約をキャンセルしますか？")) return;
+
+            await updateDoc(doc(db, "reservations", r.id), {
+              status: "cancelled",
+              cancelledBy: "admin",
+              cancelledAt: serverTimestamp()
+            });
+
+            alert("キャンセルしました。");
+            await loadAllData();
+            renderCalendar();
+            showReservations(dateStr);
+            renderCancelHistory();
+          });
+
+          reservationList.appendChild(card);
+        });
+      });
+    }
+
+    function renderCancelHistory() {
+      const cancelled = reservations
+        .filter(r => r.status === "cancelled")
+        .sort((a, b) => {
+          const at = a.cancelledAt?.seconds || 0;
+          const bt = b.cancelledAt?.seconds || 0;
+          return bt - at;
+        })
+        .slice(0, 20);
+
+      if (cancelled.length === 0) {
+        cancelHistory.innerHTML = "<p>キャンセル履歴はありません。</p>";
+        return;
+      }
+
+      cancelHistory.innerHTML = "";
+
+      cancelled.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "reservation-card";
+
+        div.innerHTML = `
+          <div>日付：${escapeHtml(r.date || "")}</div>
+          <div>時間：${escapeHtml(r.slot || "")}</div>
+          <div>名前：${escapeHtml(r.name || "")}</div>
+          <div>電話：${escapeHtml(r.phone || "")}</div>
+          <div>キャンセル者：${escapeHtml(r.cancelledBy || "")}</div>
+        `;
+
+        cancelHistory.appendChild(div);
+      });
+    }
+
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
 </body>
 </html>
