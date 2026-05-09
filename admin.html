@@ -198,8 +198,15 @@
       </section>
 
       <section>
-        <h2>キャンセル履歴</h2>
+        <h2>
+        <button id="toggleCancelHistoryButton">
+        ▼ キャンセル履歴を開く
+         </button>
+       </h2>
+
+       <div id="cancelHistoryWrapper" class="hidden">
         <div id="cancelHistory"></div>
+       </div>
       </section>
 
       <section>
@@ -252,6 +259,8 @@
     const saveClosedButton = document.getElementById("saveClosedButton");
 
     const cancelHistory = document.getElementById("cancelHistory");
+    const toggleCancelHistoryButton = document.getElementById("toggleCancelHistoryButton");
+    const cancelHistoryWrapper = document.getElementById("cancelHistoryWrapper");
     const calendar = document.getElementById("calendar");
     const selectedDateInfo = document.getElementById("selectedDateInfo");
     const reservationList = document.getElementById("reservationList");
@@ -259,6 +268,16 @@
     let dailySlotsMap = {};
     let closedDatesMap = {};
     let reservations = [];
+
+    toggleCancelHistoryButton.addEventListener("click", () => {
+      if (cancelHistoryWrapper.classList.contains("hidden")) {
+        cancelHistoryWrapper.classList.remove("hidden");
+        toggleCancelHistoryButton.textContent = "▲ キャンセル履歴を閉じる";
+      } else {
+        cancelHistoryWrapper.classList.add("hidden");
+        toggleCancelHistoryButton.textContent = "▼ キャンセル履歴を開く";
+      }
+   });
 
     loginButton.addEventListener("click", async () => {
       if (passwordInput.value === "yoshi") {
