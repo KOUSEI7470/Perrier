@@ -45,6 +45,9 @@ button {
   border: none;
   border-radius: 10px;
 }
+.cancel-btn {
+  background: #9b2c2c;
+}
 .months {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -178,6 +181,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   deleteDoc,
   collection,
   getDocs
@@ -246,11 +250,16 @@ async function loadReservations() {
 
   snap.forEach(d => {
     const data = d.data();
+
     if (data.date && data.status !== "cancelled") {
       if (!reservations[data.date]) {
         reservations[data.date] = [];
       }
-      reservations[data.date].push(data);
+
+      reservations[data.date].push({
+        id: d.id,
+        ...data
+      });
     }
   });
 }
@@ -324,6 +333,24 @@ window.deleteClosedDate = async function() {
   alert("休業日を解除しました");
   await loadAll();
   selectDate(selectedDate);
+};
+
+window.cancelReservation = async function(reservationId) {
+  if (!confirm("この予約をキャンセル扱いにしますか？")) {
+    return;
+  }
+
+  await updateDoc(doc(db, "reservations", reservationId), {
+    status: "cancelled"
+  });
+
+  alert("予約をキャンセルしました");
+
+  await loadAll();
+
+  if (selectedDate) {
+    selectDate(selectedDate);
+  }
 };
 
 function renderCalendars() {
@@ -471,7 +498,8 @@ function renderReservationStatus(dateStr) {
         <strong>${slot}：予約あり</strong><br>
         お名前：${found.name || ""}<br>
         電話番号：${found.phone || ""}<br>
-        メモ：${found.memo || ""}
+        メモ：${found.memo || ""}<br>
+        <button class="cancel-btn" onclick="cancelReservation('${found.id}')">この予約をキャンセル</button>
       `;
     } else {
       div.innerHTML = `<strong>${slot}：空き</strong>`;
