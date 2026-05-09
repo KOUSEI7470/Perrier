@@ -11,7 +11,6 @@ body {
   font-family: "Yu Gothic", sans-serif;
   background: linear-gradient(135deg,#10281f,#1f4d3a);
 }
-
 .container {
   max-width: 900px;
   margin: 20px auto;
@@ -19,42 +18,35 @@ body {
   padding: 20px;
   border-radius: 20px;
 }
-
 h1, h2, h3 {
   color: #1f4d3a;
 }
-
 .card {
   background: white;
   padding: 15px;
   margin-top: 20px;
   border-radius: 15px;
 }
-
 .months {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
-
 .calendar {
   background: #fff;
   padding: 10px;
   border-radius: 12px;
 }
-
 .week, .days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
 }
-
 .week div {
   text-align: center;
   font-weight: bold;
   color: #555;
 }
-
 .day {
   min-height: 52px;
   padding: 5px;
@@ -63,33 +55,27 @@ h1, h2, h3 {
   cursor: pointer;
   text-align: center;
 }
-
 .day.gray {
   background: #ccc;
   color: #777;
   cursor: not-allowed;
 }
-
-.day.full {
-  background: #999;
-  color: white;
-  cursor: not-allowed;
-}
-
 .day.closed {
   background: #e88;
   color: white;
   cursor: not-allowed;
 }
-
+.day.full {
+  background: #999;
+  color: white;
+  cursor: not-allowed;
+}
 .day.selected {
   outline: 3px solid #1f4d3a;
 }
-
 .small {
   font-size: 12px;
 }
-
 .slot-button {
   width: 100%;
   padding: 12px;
@@ -100,22 +86,17 @@ h1, h2, h3 {
   color: white;
   font-size: 16px;
 }
-
 .slot-button.selected {
   background: #c08a2b;
 }
-
 .slot-button.disabled {
   background: #999;
-  color: white;
   cursor: not-allowed;
 }
-
 input, textarea, button {
   box-sizing: border-box;
   font-size: 16px;
 }
-
 input, textarea {
   width: 100%;
   padding: 10px;
@@ -123,7 +104,6 @@ input, textarea {
   border: 1px solid #bbb;
   border-radius: 8px;
 }
-
 button.submit {
   width: 100%;
   padding: 14px;
@@ -133,14 +113,18 @@ button.submit {
   border: none;
   border-radius: 10px;
 }
-
 .my-reservation {
   background: #fff3cd;
   padding: 12px;
   border-radius: 10px;
   line-height: 1.8;
 }
-
+.cancelled-reservation {
+  background: #ffd6d6;
+  padding: 12px;
+  border-radius: 10px;
+  line-height: 1.8;
+}
 @media (max-width: 700px) {
   .months {
     grid-template-columns: 1fr;
@@ -156,7 +140,7 @@ button.submit {
 
 <div class="card">
   <h3>あなたの予約</h3>
-  <div id="myReservationArea">現在この端末に保存されている予約はありません。</div>
+  <div id="myReservationArea">確認中です...</div>
 </div>
 
 <div class="card">
@@ -209,7 +193,7 @@ let dailySlots = {};
 let reservedMap = {};
 
 await loadAll();
-showMyReservation();
+await showMyReservation();
 
 async function loadAll() {
   await loadPeriod();
@@ -221,9 +205,7 @@ async function loadAll() {
 }
 
 async function loadPeriod() {
-  const ref = doc(db, "settings", "reservationPeriod");
-  const snap = await getDoc(ref);
-
+  const snap = await getDoc(doc(db, "settings", "reservationPeriod"));
   if (snap.exists()) {
     const data = snap.data();
     periodStart = data.startDate || "";
@@ -317,7 +299,8 @@ function createMonthCalendar(baseDate) {
     div.innerHTML = `<strong>${d}</strong>`;
 
     const slots = dailySlots[dateStr]?.slots || [];
-    const allReserved = slots.length > 0 && slots.every(slot => reservedMap[dateStr + "_" + slot]);
+    const remaining = slots.filter(slot => !reservedMap[dateStr + "_" + slot]).length;
+    const allReserved = slots.length > 0 && remaining === 0;
 
     const unavailable =
       isPast(dateStr) ||
@@ -333,13 +316,10 @@ function createMonthCalendar(baseDate) {
     if (closedDates[dateStr]) {
       div.classList.add("closed");
       div.innerHTML += `<div class="small">休</div>`;
-    }
-
-    if (allReserved) {
+    } else if (allReserved) {
       div.classList.add("full");
       div.innerHTML += `<div class="small">満席</div>`;
     } else if (slots.length > 0) {
-      const remaining = slots.filter(slot => !reservedMap[dateStr + "_" + slot]).length;
       div.innerHTML += `<div class="small">空き${remaining}</div>`;
     }
 
@@ -428,7 +408,7 @@ window.submitReservation = async function() {
   const ref = doc(db, "reservations", reservationId);
   const snap = await getDoc(ref);
 
-  if (snap.exists()) {
+  if (snap.exists() && snap.data().status !== "cancelled") {
     alert("この時間枠はすでに予約されています。");
     await loadReservations();
     renderSlots(selectedDate);
@@ -447,6 +427,7 @@ window.submitReservation = async function() {
   });
 
   const myReservation = {
+    reservationId: reservationId,
     date: selectedDate,
     slot: selectedSlot,
     name: name,
@@ -466,13 +447,13 @@ window.submitReservation = async function() {
   selectedSlot = "";
 
   await loadAll();
-  showMyReservation();
+  await showMyReservation();
 
   document.getElementById("selectedDateText").textContent = "日付を選択してください";
   document.getElementById("slotArea").textContent = "日付を選択すると時間枠が表示されます。";
 };
 
-function showMyReservation() {
+async function showMyReservation() {
   const area = document.getElementById("myReservationArea");
   const saved = localStorage.getItem("perrierMyReservation");
 
@@ -483,14 +464,54 @@ function showMyReservation() {
 
   const data = JSON.parse(saved);
 
+  if (!data.reservationId) {
+    area.innerHTML = `
+      <div class="my-reservation">
+        <strong>予約日時</strong><br>
+        ${data.date}　${data.slot}<br>
+        <strong>お名前</strong><br>
+        ${data.name || ""}<br>
+        <strong>電話番号</strong><br>
+        ${data.phone || ""}
+      </div>
+    `;
+    return;
+  }
+
+  const ref = doc(db, "reservations", data.reservationId);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    area.innerHTML = `
+      <div class="cancelled-reservation">
+        <strong>予約は確認できませんでした。</strong><br>
+        店舗へお問い合わせください。
+      </div>
+    `;
+    return;
+  }
+
+  const latest = snap.data();
+
+  if (latest.status === "cancelled") {
+    area.innerHTML = `
+      <div class="cancelled-reservation">
+        <strong>この予約はキャンセルされました。</strong><br>
+        予約日時：${data.date}　${data.slot}<br>
+        必要な場合は、再度ご予約ください。
+      </div>
+    `;
+    return;
+  }
+
   area.innerHTML = `
     <div class="my-reservation">
       <strong>予約日時</strong><br>
-      ${data.date}　${data.slot}<br>
+      ${latest.date || data.date}　${latest.slot || data.slot}<br>
       <strong>お名前</strong><br>
-      ${data.name || ""}<br>
+      ${latest.name || data.name || ""}<br>
       <strong>電話番号</strong><br>
-      ${data.phone || ""}
+      ${latest.phone || data.phone || ""}
     </div>
   `;
 }
