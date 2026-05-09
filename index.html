@@ -24,6 +24,13 @@ h1, h2, h3 {
   color: #1f4d3a;
 }
 
+.card {
+  background: white;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 15px;
+}
+
 .months {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -49,7 +56,7 @@ h1, h2, h3 {
 }
 
 .day {
-  min-height: 48px;
+  min-height: 52px;
   padding: 5px;
   border-radius: 8px;
   background: #bfe6c8;
@@ -60,6 +67,12 @@ h1, h2, h3 {
 .day.gray {
   background: #ccc;
   color: #777;
+  cursor: not-allowed;
+}
+
+.day.full {
+  background: #999;
+  color: white;
   cursor: not-allowed;
 }
 
@@ -92,6 +105,12 @@ h1, h2, h3 {
   background: #c08a2b;
 }
 
+.slot-button.disabled {
+  background: #999;
+  color: white;
+  cursor: not-allowed;
+}
+
 input, textarea, button {
   box-sizing: border-box;
   font-size: 16px;
@@ -115,11 +134,11 @@ button.submit {
   border-radius: 10px;
 }
 
-.card {
-  background: white;
-  padding: 15px;
-  margin-top: 20px;
-  border-radius: 15px;
+.my-reservation {
+  background: #fff3cd;
+  padding: 12px;
+  border-radius: 10px;
+  line-height: 1.8;
 }
 
 @media (max-width: 700px) {
@@ -136,7 +155,13 @@ button.submit {
 <h1>Perrier 予約ページ</h1>
 
 <div class="card">
+  <h3>あなたの予約</h3>
+  <div id="myReservationArea">現在この端末に保存されている予約はありません。</div>
+</div>
+
+<div class="card">
   <h3>予約日を選択してください</h3>
+  <p id="periodText"></p>
   <div id="calendarArea" class="months"></div>
 </div>
 
@@ -158,6 +183,8 @@ button.submit {
 
 </div>
 
+<script src="config.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import {
@@ -169,8 +196,6 @@ import {
   getDocs,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
-
-
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -184,12 +209,14 @@ let dailySlots = {};
 let reservedMap = {};
 
 await loadAll();
+showMyReservation();
 
 async function loadAll() {
   await loadPeriod();
   await loadClosedDates();
   await loadDailySlots();
   await loadReservations();
+  renderPeriodText();
   renderCalendars();
 }
 
@@ -225,10 +252,20 @@ async function loadReservations() {
   const snap = await getDocs(collection(db, "reservations"));
   snap.forEach(d => {
     const data = d.data();
-    if (data.date && data.slot) {
+    if (data.date && data.slot && data.status !== "cancelled") {
       reservedMap[data.date + "_" + data.slot] = true;
     }
   });
+}
+
+function renderPeriodText() {
+  const area = document.getElementById("periodText");
+
+  if (periodStart && periodEnd) {
+    area.textContent = `予約受付期間：${periodStart} ～ ${periodEnd}`;
+  } else {
+    area.textContent = "現在、予約受付期間が設定されていません。";
+  }
 }
 
 function renderCalendars() {
@@ -270,8 +307,7 @@ function createMonthCalendar(baseDate) {
   const lastDate = new Date(year, month + 1, 0).getDate();
 
   for (let i = 0; i < firstDay; i++) {
-    const blank = document.createElement("div");
-    days.appendChild(blank);
+    days.appendChild(document.createElement("div"));
   }
 
   for (let d = 1; d <= lastDate; d++) {
@@ -280,15 +316,17 @@ function createMonthCalendar(baseDate) {
     div.className = "day";
     div.innerHTML = `<strong>${d}</strong>`;
 
+    const slots = dailySlots[dateStr]?.slots || [];
+    const allReserved = slots.length > 0 && slots.every(slot => reservedMap[dateStr + "_" + slot]);
+
     const unavailable =
       isPast(dateStr) ||
       isOutsidePeriod(dateStr) ||
       closedDates[dateStr] ||
-      !dailySlots[dateStr] ||
-      !dailySlots[dateStr].slots ||
-      dailySlots[dateStr].slots.length === 0;
+      slots.length === 0 ||
+      allReserved;
 
-    if (unavailable) {
+    if (isPast(dateStr) || isOutsidePeriod(dateStr) || slots.length === 0) {
       div.classList.add("gray");
     }
 
@@ -297,8 +335,12 @@ function createMonthCalendar(baseDate) {
       div.innerHTML += `<div class="small">休</div>`;
     }
 
-    if (dailySlots[dateStr] && dailySlots[dateStr].slots) {
-      div.innerHTML += `<div class="small">${dailySlots[dateStr].slots.length}枠</div>`;
+    if (allReserved) {
+      div.classList.add("full");
+      div.innerHTML += `<div class="small">満席</div>`;
+    } else if (slots.length > 0) {
+      const remaining = slots.filter(slot => !reservedMap[dateStr + "_" + slot]).length;
+      div.innerHTML += `<div class="small">空き${remaining}</div>`;
     }
 
     if (dateStr === selectedDate) {
@@ -319,7 +361,9 @@ function createMonthCalendar(baseDate) {
 function selectDate(dateStr) {
   selectedDate = dateStr;
   selectedSlot = "";
+
   document.getElementById("selectedDateText").textContent = dateStr;
+
   renderCalendars();
   renderSlots(dateStr);
 }
@@ -343,7 +387,7 @@ function renderSlots(dateStr) {
     if (reservedMap[key]) {
       btn.textContent = slot + "（予約済み）";
       btn.disabled = true;
-      btn.style.background = "#999";
+      btn.classList.add("disabled");
     } else {
       btn.textContent = slot;
       btn.onclick = () => {
@@ -388,6 +432,7 @@ window.submitReservation = async function() {
     alert("この時間枠はすでに予約されています。");
     await loadReservations();
     renderSlots(selectedDate);
+    renderCalendars();
     return;
   }
 
@@ -401,6 +446,16 @@ window.submitReservation = async function() {
     createdAt: serverTimestamp()
   });
 
+  const myReservation = {
+    date: selectedDate,
+    slot: selectedSlot,
+    name: name,
+    phone: phone,
+    memo: memo
+  };
+
+  localStorage.setItem("perrierMyReservation", JSON.stringify(myReservation));
+
   alert("予約を受け付けました。");
 
   document.getElementById("customerName").value = "";
@@ -411,9 +466,34 @@ window.submitReservation = async function() {
   selectedSlot = "";
 
   await loadAll();
+  showMyReservation();
+
   document.getElementById("selectedDateText").textContent = "日付を選択してください";
   document.getElementById("slotArea").textContent = "日付を選択すると時間枠が表示されます。";
 };
+
+function showMyReservation() {
+  const area = document.getElementById("myReservationArea");
+  const saved = localStorage.getItem("perrierMyReservation");
+
+  if (!saved) {
+    area.textContent = "現在この端末に保存されている予約はありません。";
+    return;
+  }
+
+  const data = JSON.parse(saved);
+
+  area.innerHTML = `
+    <div class="my-reservation">
+      <strong>予約日時</strong><br>
+      ${data.date}　${data.slot}<br>
+      <strong>お名前</strong><br>
+      ${data.name || ""}<br>
+      <strong>電話番号</strong><br>
+      ${data.phone || ""}
+    </div>
+  `;
+}
 
 function formatDate(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
