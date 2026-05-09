@@ -121,12 +121,25 @@
       margin-bottom: 4px;
     }
 
+    .slot-group {
+      border: 2px solid #b8d0e5;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 14px 0;
+      background: #f7fbff;
+    }
+
+    .slot-group h4 {
+      margin: 0 0 10px 0;
+      color: #1f5f8b;
+    }
+
     .reservation-card {
-      border: 1px solid #ddd;
+      border: 1px solid #bbb;
+      background: white;
       padding: 10px;
       border-radius: 8px;
       margin: 8px 0;
-      background: #fafafa;
     }
 
     @media (max-width: 700px) {
@@ -545,15 +558,17 @@
         const slotReservations = activeReservations.filter(r => r.slot === slot.time);
         const remain = Number(slot.capacity || 0) - slotReservations.length;
 
-        const slotTitle = document.createElement("h4");
-        slotTitle.textContent =
-          `${slot.time}　定員 ${slot.capacity}名 / 予約 ${slotReservations.length}名 / 残り ${Math.max(remain, 0)}名`;
-        reservationList.appendChild(slotTitle);
+        const group = document.createElement("div");
+        group.className = "slot-group";
+
+        group.innerHTML = `
+          <h4>${escapeHtml(slot.time)}　定員 ${slot.capacity}名 / 予約 ${slotReservations.length}名 / 残り ${Math.max(remain, 0)}名</h4>
+        `;
 
         if (slotReservations.length === 0) {
           const p = document.createElement("p");
           p.textContent = "予約なし";
-          reservationList.appendChild(p);
+          group.appendChild(p);
         }
 
         slotReservations.forEach(r => {
@@ -584,8 +599,10 @@
             renderCancelHistory();
           });
 
-          reservationList.appendChild(card);
+          group.appendChild(card);
         });
+
+        reservationList.appendChild(group);
       });
     }
 
