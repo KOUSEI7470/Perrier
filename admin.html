@@ -11,7 +11,6 @@ body {
   font-family: "Yu Gothic", sans-serif;
   background: linear-gradient(135deg,#10281f,#1f4d3a);
 }
-
 .container {
   max-width: 900px;
   margin: 20px auto;
@@ -19,16 +18,11 @@ body {
   padding: 20px;
   border-radius: 20px;
 }
-
-h1, h2, h3 {
-  color: #1f4d3a;
-}
-
+h1, h2, h3 { color: #1f4d3a; }
 input, textarea, button {
   box-sizing: border-box;
   font-size: 16px;
 }
-
 input, textarea {
   width: 100%;
   padding: 10px;
@@ -36,7 +30,6 @@ input, textarea {
   border: 1px solid #bbb;
   border-radius: 8px;
 }
-
 button {
   width: 100%;
   padding: 12px;
@@ -46,38 +39,32 @@ button {
   border: none;
   border-radius: 10px;
 }
-
 .card {
   background: white;
   padding: 15px;
   margin-top: 20px;
   border-radius: 15px;
 }
-
 .months {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
-
 .calendar {
   background: #fff;
   padding: 10px;
   border-radius: 12px;
 }
-
 .week, .days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
 }
-
 .week div {
   text-align: center;
   font-weight: bold;
   color: #555;
 }
-
 .day {
   min-height: 48px;
   padding: 5px;
@@ -86,40 +73,35 @@ button {
   cursor: pointer;
   text-align: center;
 }
-
 .day.gray {
   background: #ccc;
   color: #777;
 }
-
 .day.closed {
   background: #e88;
   color: white;
 }
-
 .day.hasSlots {
   background: #bfe6c8;
 }
-
 .day.selected {
   outline: 3px solid #1f4d3a;
 }
-
-.small {
-  font-size: 12px;
-}
-
+.small { font-size: 12px; }
 .list-item {
   background: #f3f3f3;
-  padding: 8px;
+  padding: 10px;
   margin-top: 6px;
   border-radius: 8px;
 }
-
+.reserved {
+  background: #ffe1e1;
+}
+.empty {
+  background: #e8f5e9;
+}
 @media (max-width: 700px) {
-  .months {
-    grid-template-columns: 1fr;
-  }
+  .months { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -148,7 +130,7 @@ button {
 
 <div class="card">
   <h3>日別予約枠カレンダー</h3>
-  <p>日付をクリックして、その日の予約枠・休業日を設定します。</p>
+  <p>日付をクリックすると、その日の予約枠と予約状況を確認できます。</p>
   <div id="calendarArea" class="months"></div>
 </div>
 
@@ -168,6 +150,11 @@ button {
 </div>
 
 <div class="card">
+  <h3>選択日の予約状況</h3>
+  <div id="reservationStatusArea">日付を選択してください。</div>
+</div>
+
+<div class="card">
   <h3>登録内容</h3>
   <div id="summaryArea"></div>
 </div>
@@ -175,6 +162,7 @@ button {
 </div>
 </div>
 
+<script src="config.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import {
@@ -187,12 +175,7 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-/* ★ここを index.html と同じ firebaseConfig に置き換え */
-const firebaseConfig = {
-  apiKey: "AIzaSyAUUlV54Y08A3HHPKUM9j3XzBVM4uOGhFA",
-  authDomain: "perrier-713e4.firebaseapp.com",
-  projectId: "perrier-713e4"
-};
+
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -202,6 +185,7 @@ let periodStart = "";
 let periodEnd = "";
 let closedDates = {};
 let dailySlots = {};
+let reservations = {};
 
 window.login = async function() {
   const pass = document.getElementById("adminPass").value;
@@ -219,6 +203,7 @@ async function loadAll() {
   await loadPeriod();
   await loadClosedDates();
   await loadDailySlots();
+  await loadReservations();
   renderCalendars();
   renderSummary();
 }
@@ -249,6 +234,20 @@ async function loadDailySlots() {
   const snap = await getDocs(collection(db, "dailySlots"));
   snap.forEach(d => {
     dailySlots[d.id] = d.data();
+  });
+}
+
+async function loadReservations() {
+  reservations = {};
+  const snap = await getDocs(collection(db, "reservations"));
+  snap.forEach(d => {
+    const data = d.data();
+    if (data.date) {
+      if (!reservations[data.date]) {
+        reservations[data.date] = [];
+      }
+      reservations[data.date].push(data);
+    }
   });
 }
 
@@ -382,9 +381,13 @@ function createMonthCalendar(baseDate) {
       div.innerHTML += `<div class="small">休</div>`;
     }
 
-    if (dailySlots[dateStr] && dailySlots[dateStr].slots && dailySlots[dateStr].slots.length > 0) {
+    if (dailySlots[dateStr]?.slots?.length > 0) {
       div.classList.add("hasSlots");
       div.innerHTML += `<div class="small">${dailySlots[dateStr].slots.length}枠</div>`;
+    }
+
+    if (reservations[dateStr]?.length > 0) {
+      div.innerHTML += `<div class="small">予約${reservations[dateStr].length}</div>`;
     }
 
     if (dateStr === selectedDate) {
@@ -411,9 +414,41 @@ function selectDate(dateStr) {
   document.getElementById("closedReason").value = reason;
 
   renderCalendars();
+  renderReservationStatus(dateStr);
 }
 
-window.selectDate = selectDate;
+function renderReservationStatus(dateStr) {
+  const area = document.getElementById("reservationStatusArea");
+  area.innerHTML = "";
+
+  const slots = dailySlots[dateStr]?.slots || [];
+  const dayReservations = reservations[dateStr] || [];
+
+  if (slots.length === 0) {
+    area.textContent = "この日は時間枠が登録されていません。";
+    return;
+  }
+
+  slots.forEach(slot => {
+    const found = dayReservations.find(r => r.slot === slot);
+
+    const div = document.createElement("div");
+    div.className = "list-item " + (found ? "reserved" : "empty");
+
+    if (found) {
+      div.innerHTML = `
+        <strong>${slot}：予約あり</strong><br>
+        お名前：${found.name || ""}<br>
+        電話番号：${found.phone || ""}<br>
+        メモ：${found.memo || ""}
+      `;
+    } else {
+      div.innerHTML = `<strong>${slot}：空き</strong>`;
+    }
+
+    area.appendChild(div);
+  });
+}
 
 function renderSummary() {
   const area = document.getElementById("summaryArea");
