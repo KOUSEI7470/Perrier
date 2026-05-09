@@ -366,11 +366,11 @@
 
       if (dateStr < todayStr) {
         return {
-          label: "受付終了",
+          label: "",
           className: "disabled-day",
           canSelect: false
         };
-      }
+    }
 
       if (reservationPeriod) {
         if (reservationPeriod.startDate && dateStr < reservationPeriod.startDate) {
