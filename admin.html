@@ -107,6 +107,9 @@ button {
 .reserved {
   background: #ffe1e1;
 }
+.cancelled {
+  background: #ffd6d6;
+}
 .closed-box {
   background: #ffd6d6;
 }
@@ -133,6 +136,11 @@ button {
 <div id="adminContent" style="display:none;">
 
 <h1>Perrier 管理画面</h1>
+
+<div class="card">
+  <h3>キャンセル履歴</h3>
+  <div id="cancelHistoryArea">読み込み中...</div>
+</div>
 
 <div class="card">
   <h3>予約受付期間</h3>
@@ -184,7 +192,8 @@ import {
   updateDoc,
   deleteDoc,
   collection,
-  getDocs
+  getDocs,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
 const app = initializeApp(window.firebaseConfig);
@@ -196,6 +205,7 @@ let periodEnd = "";
 let closedDates = {};
 let dailySlots = {};
 let reservations = {};
+let cancelledReservations = [];
 
 window.login = async function() {
   const pass = document.getElementById("adminPass").value;
@@ -214,6 +224,7 @@ async function loadAll() {
   await loadClosedDates();
   await loadDailySlots();
   await loadReservations();
+  renderCancelHistory();
   renderCalendars();
 
   if (selectedDate) {
@@ -246,21 +257,28 @@ async function loadDailySlots() {
 
 async function loadReservations() {
   reservations = {};
+  cancelledReservations = [];
+
   const snap = await getDocs(collection(db, "reservations"));
 
   snap.forEach(d => {
-    const data = d.data();
+    const data = {
+      id: d.id,
+      ...d.data()
+    };
 
-    if (data.date && data.status !== "cancelled") {
-      if (!reservations[data.date]) {
-        reservations[data.date] = [];
-      }
+    if (!data.date) return;
 
-      reservations[data.date].push({
-        id: d.id,
-        ...data
-      });
+    if (data.status === "cancelled") {
+      cancelledReservations.push(data);
+      return;
     }
+
+    if (!reservations[data.date]) {
+      reservations[data.date] = [];
+    }
+
+    reservations[data.date].push(data);
   });
 }
 
@@ -341,7 +359,9 @@ window.cancelReservation = async function(reservationId) {
   }
 
   await updateDoc(doc(db, "reservations", reservationId), {
-    status: "cancelled"
+    status: "cancelled",
+    cancelledAt: serverTimestamp(),
+    cancelledBy: "admin"
   });
 
   alert("予約をキャンセルしました");
@@ -352,6 +372,44 @@ window.cancelReservation = async function(reservationId) {
     selectDate(selectedDate);
   }
 };
+
+function renderCancelHistory() {
+  const area = document.getElementById("cancelHistoryArea");
+  area.innerHTML = "";
+
+  if (cancelledReservations.length === 0) {
+    area.textContent = "キャンセル履歴はありません。";
+    return;
+  }
+
+  cancelledReservations
+    .sort((a, b) => {
+      const ad = a.date || "";
+      const bd = b.date || "";
+      if (ad !== bd) return bd.localeCompare(ad);
+      return (b.slot || "").localeCompare(a.slot || "");
+    })
+    .slice(0, 10)
+    .forEach(r => {
+      const div = document.createElement("div");
+      div.className = "list-item cancelled";
+
+      const byText = r.cancelledBy === "customer"
+        ? "お客様"
+        : r.cancelledBy === "admin"
+          ? "管理者"
+          : "不明";
+
+      div.innerHTML = `
+        <strong>${r.date || ""}　${r.slot || ""}</strong><br>
+        お名前：${r.name || ""}<br>
+        電話番号：${r.phone || ""}<br>
+        キャンセル者：${byText}
+      `;
+
+      area.appendChild(div);
+    });
+}
 
 function renderCalendars() {
   const area = document.getElementById("calendarArea");
