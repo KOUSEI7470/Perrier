@@ -525,82 +525,86 @@
     }
 
     function showReservations(dateStr) {
-      const slots = dailySlotsMap[dateStr]?.slots || [];
+  const slots = dailySlotsMap[dateStr]?.slots || [];
 
-      const activeReservations = reservations.filter(r =>
-        r.date === dateStr && r.status !== "cancelled"
-      );
+  const activeReservations = reservations.filter(r =>
+    r.date === dateStr && r.status !== "cancelled"
+  );
 
-      const cancelledReservations = reservations.filter(r =>
-        r.date === dateStr && r.status === "cancelled"
-      );
+  const cancelledReservations = reservations.filter(r =>
+    r.date === dateStr && r.status === "cancelled"
+  );
 
-      const totalCapacity = slots.reduce((sum, s) => {
-        return sum + Number(s.capacity || 0);
-      }, 0);
+  const totalCapacity = slots.reduce((sum, s) => {
+    return sum + Number(s.capacity || 0);
+  }, 0);
 
-      selectedDateInfo.innerHTML = `
-        <h3>${escapeHtml(dateStr)}</h3>
-        <p>全対応人数：${totalCapacity}</p>
-        <p>予約済み：${activeReservations.length}</p>
-        <p>空き：${Math.max(totalCapacity - activeReservations.length, 0)}</p>
-        <p>キャンセル：${cancelledReservations.length}</p>
+  selectedDateInfo.innerHTML = `
+    <h3>${escapeHtml(dateStr)}</h3>
+    <p>全対応人数：${totalCapacity}</p>
+    <p>予約済み：${activeReservations.length}</p>
+    <p>空き：${Math.max(totalCapacity - activeReservations.length, 0)}</p>
+    <p>キャンセル：${cancelledReservations.length}</p>
+  `;
+
+  reservationList.innerHTML = "";
+
+  if (slots.length === 0) {
+    reservationList.innerHTML = "<p>この日は時間枠が設定されていません。</p>";
+    return;
+  }
+
+  slots.forEach(slot => {
+    const slotReservations = activeReservations.filter(r => r.slot === slot.time);
+
+    const group = document.createElement("div");
+    group.className = "slot-group";
+
+    group.innerHTML = `
+      <h4>${escapeHtml(slot.time)}　定員 ${slot.capacity}名 / 予約 ${slotReservations.length}名</h4>
+    `;
+
+    if (slotReservations.length === 0) {
+      const card = document.createElement("div");
+      card.className = "reservation-card";
+      card.innerHTML = `<div>予約なし</div>`;
+      group.appendChild(card);
+    }
+
+    slotReservations.forEach(r => {
+      const card = document.createElement("div");
+      card.className = "reservation-card";
+
+      card.innerHTML = `
+        <div><strong>${escapeHtml(r.slot || "")}</strong></div>
+        <div>名前：${escapeHtml(r.name || "")}</div>
+        <div>電話：${escapeHtml(r.phone || "")}</div>
+        <div>メモ：${escapeHtml(r.memo || "")}</div>
+        <button class="danger">この予約をキャンセル</button>
       `;
 
-      reservationList.innerHTML = "";
+      card.querySelector("button").addEventListener("click", async () => {
+        if (!confirm("この予約をキャンセルしますか？")) return;
 
-      if (slots.length === 0) {
-        reservationList.innerHTML = "<p>この日は時間枠が設定されていません。</p>";
-        return;
-      }
-
-      slots.forEach(slot => {
-        const slotReservations = activeReservations.filter(r => r.slot === slot.time);
-        const remain = Number(slot.capacity || 0) - slotReservations.length;
-
-        const group = document.createElement("div");
-        group.className = "slot-group";
-
-        group.innerHTML = `
-          <h4>${escapeHtml(slot.time)}　定員 ${slot.capacity}名 / 予約 ${slotReservations.length}名 / 残り ${Math.max(remain, 0)}名</h4>
-        `;
-
-        if (slotReservations.length === 0) {
-          const p = document.createElement("p");
-          p.textContent = "予約なし";
-          group.appendChild(p);
-        }
-
-        slotReservations.forEach(r => {
-          const card = document.createElement("div");
-          card.className = "reservation-card";
-
-          card.innerHTML = `
-            <div><strong>${escapeHtml(r.slot || "")}</strong></div>
-            <div>名前：${escapeHtml(r.name || "")}</div>
-            <div>電話：${escapeHtml(r.phone || "")}</div>
-            <div>メモ：${escapeHtml(r.memo || "")}</div>
-            <button class="danger">この予約をキャンセル</button>
-          `;
-
-          card.querySelector("button").addEventListener("click", async () => {
-            if (!confirm("この予約をキャンセルしますか？")) return;
-
-            await updateDoc(doc(db, "reservations", r.id), {
-              status: "cancelled",
-              cancelledBy: "admin",
-              cancelledAt: serverTimestamp()
-            });
-
-            alert("キャンセルしました。");
-            await loadAllData();
-            renderCalendar();
-            showReservations(dateStr);
-            renderCancelHistory();
-          });
-
-          group.appendChild(card);
+        await updateDoc(doc(db, "reservations", r.id), {
+          status: "cancelled",
+          cancelledBy: "admin",
+          cancelledAt: serverTimestamp()
         });
+
+        alert("キャンセルしました。");
+        await loadAllData();
+        renderCalendar();
+        showReservations(dateStr);
+        renderCancelHistory();
+      });
+
+      group.appendChild(card);
+    });
+
+    reservationList.appendChild(group);
+  });
+}
 
         reservationList.appendChild(group);
       });
