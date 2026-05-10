@@ -142,6 +142,11 @@
       margin: 8px 0;
     }
 
+    .top-actions {
+      text-align: right;
+      margin-bottom: 12px;
+    }
+
     @media (max-width: 700px) {
       .calendar-grid {
         gap: 4px;
@@ -168,11 +173,16 @@
   <main>
     <section id="loginSection">
       <h2>管理ログイン</h2>
+      <input type="email" id="emailInput" placeholder="メールアドレス" />
       <input type="password" id="passwordInput" placeholder="パスワード" />
       <button id="loginButton">ログイン</button>
     </section>
 
     <div id="adminArea" class="hidden">
+      <div class="top-actions">
+        <button id="logoutButton" class="danger">ログアウト</button>
+      </div>
+
       <section>
         <h2>受付期間設定</h2>
         <input type="date" id="startDate" />
@@ -199,14 +209,14 @@
 
       <section>
         <h2>
-        <button id="toggleCancelHistoryButton">
-        ▼ キャンセル履歴を開く
-         </button>
-       </h2>
+          <button id="toggleCancelHistoryButton">
+            ▼ キャンセル履歴を開く
+          </button>
+        </h2>
 
-       <div id="cancelHistoryWrapper" class="hidden">
-        <div id="cancelHistory"></div>
-       </div>
+        <div id="cancelHistoryWrapper" class="hidden">
+          <div id="cancelHistory"></div>
+        </div>
       </section>
 
       <section>
@@ -224,6 +234,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
     import {
       getFirestore,
       collection,
@@ -235,14 +246,24 @@
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     const app = initializeApp(window.firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
     const loginSection = document.getElementById("loginSection");
     const adminArea = document.getElementById("adminArea");
 
+    const emailInput = document.getElementById("emailInput");
     const passwordInput = document.getElementById("passwordInput");
     const loginButton = document.getElementById("loginButton");
+    const logoutButton = document.getElementById("logoutButton");
 
     const startDate = document.getElementById("startDate");
     const endDate = document.getElementById("endDate");
@@ -269,6 +290,39 @@
     let closedDatesMap = {};
     let reservations = [];
 
+    loginButton.addEventListener("click", async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!email || !password) {
+        alert("メールアドレスとパスワードを入力してください。");
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        console.error(error);
+        alert("ログインに失敗しました。メールアドレスまたはパスワードを確認してください。");
+      }
+    });
+
+    logoutButton.addEventListener("click", async () => {
+      await signOut(auth);
+      alert("ログアウトしました。");
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        loginSection.classList.add("hidden");
+        adminArea.classList.remove("hidden");
+        await initAdmin();
+      } else {
+        loginSection.classList.remove("hidden");
+        adminArea.classList.add("hidden");
+      }
+    });
+
     toggleCancelHistoryButton.addEventListener("click", () => {
       if (cancelHistoryWrapper.classList.contains("hidden")) {
         cancelHistoryWrapper.classList.remove("hidden");
@@ -276,16 +330,6 @@
       } else {
         cancelHistoryWrapper.classList.add("hidden");
         toggleCancelHistoryButton.textContent = "▼ キャンセル履歴を開く";
-      }
-   });
-
-    loginButton.addEventListener("click", async () => {
-      if (passwordInput.value === "yoshi") {
-        loginSection.classList.add("hidden");
-        adminArea.classList.remove("hidden");
-        await initAdmin();
-      } else {
-        alert("パスワードが違います。");
       }
     });
 
