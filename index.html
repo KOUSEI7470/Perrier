@@ -5,124 +5,229 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Perrier 予約フォーム</title>
   <script src="./config.js"></script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      background: #f4f7fb;
-      color: #222;
-    }
-    header {
-      background: #1f5f8b;
-      color: white;
-      padding: 16px;
-      text-align: center;
-    }
+  
+ <style>
+  body {
+    font-family: "Yu Gothic", "Hiragino Sans", system-ui, sans-serif;
+    margin: 0;
+    background:
+      radial-gradient(circle at top left, #fff7d6 0, transparent 28%),
+      linear-gradient(135deg, #071b33 0%, #123b63 45%, #f4efe3 100%);
+    color: #1f2430;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #08182d, #174b78);
+    color: #fff;
+    padding: 26px 16px;
+    text-align: center;
+    border-bottom: 4px solid #c9a646;
+    box-shadow: 0 6px 18px #0004;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-shadow: 0 2px 6px #0006;
+  }
+
+  main {
+    max-width: 980px;
+    margin: 24px auto;
+    padding: 14px;
+  }
+
+  section {
+    background: rgba(255, 255, 255, 0.94);
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 18px;
+    box-shadow: 0 10px 28px #0002;
+    border: 1px solid rgba(201, 166, 70, 0.45);
+    backdrop-filter: blur(4px);
+  }
+
+  h2 {
+    margin-top: 0;
+    color: #123b63;
+    border-left: 6px solid #c9a646;
+    padding-left: 10px;
+  }
+
+  label {
+    font-weight: 700;
+    color: #123b63;
+  }
+
+  input, textarea, button {
+    font-size: 16px;
+    padding: 11px;
+    margin: 6px 0 12px;
+    box-sizing: border-box;
+  }
+
+  input, textarea {
+    width: 100%;
+    border: 1px solid #c8d2df;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: inset 0 1px 3px #0001;
+  }
+
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: #c9a646;
+    box-shadow: 0 0 0 3px rgba(201, 166, 70, 0.22);
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #123b63, #1f6fa8);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 5px 12px #0002;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px #0003;
+  }
+
+  button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .danger {
+    background: linear-gradient(135deg, #8f1d18, #c83a31);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .day {
+    background: linear-gradient(180deg, #f7fbff, #e8f1fa);
+    padding: 10px 6px;
+    min-height: 78px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #d4dfeb;
+    box-shadow: 0 3px 8px #0001;
+    transition: 0.18s;
+  }
+
+  .day:hover {
+    outline: 2px solid #c9a646;
+    transform: translateY(-2px);
+  }
+
+  .disabled-day {
+    background: #d9d9d9;
+    color: #888;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .closed {
+    background: #d8d8d8;
+    color: #777;
+    cursor: not-allowed;
+  }
+
+  .full {
+    background: linear-gradient(180deg, #ffe1e1, #ffc4c4);
+    color: #8a2a2a;
+    cursor: not-allowed;
+    border-color: #e3aaaa;
+  }
+
+  .available {
+    background: linear-gradient(180deg, #fff9e8, #dff5e3);
+    color: #165b2f;
+    border: 2px solid #c9a646;
+    font-weight: 800;
+  }
+
+  .no-slots {
+    background: #ececec;
+    color: #888;
+    cursor: not-allowed;
+  }
+
+  .slot-button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 14px;
+    background: linear-gradient(135deg, #f7fbff, #e8f1fa);
+    color: #123b63;
+    text-align: left;
+    border: 1px solid #b8d0e5;
+    border-radius: 14px;
+    font-weight: 700;
+  }
+
+  .slot-button.selected {
+    background: linear-gradient(135deg, #123b63, #1f6fa8);
+    color: white;
+    border-color: #c9a646;
+  }
+
+  .slot-button:disabled {
+    background: #ddd;
+    color: #888;
+  }
+
+  .my-reservation {
+    border: 1px solid #c9a646;
+    background: linear-gradient(180deg, #fffdf5, #f0f7ff);
+    padding: 14px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px #0001;
+  }
+
+  @media (max-width: 700px) {
     main {
-      max-width: 980px;
-      margin: 20px auto;
-      padding: 12px;
+      margin: 12px auto;
+      padding: 8px;
     }
+
     section {
-      background: white;
-      padding: 16px;
-      margin-bottom: 18px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px #0001;
+      padding: 14px;
+      border-radius: 14px;
     }
-    input, textarea, button {
-      font-size: 16px;
-      padding: 9px;
-      margin: 5px 0;
-      box-sizing: border-box;
+
+    header h1 {
+      font-size: 24px;
     }
-    input, textarea {
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
-      background: #1f5f8b;
-      color: white;
-    }
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-    .danger {
-      background: #b3261e;
-    }
-    .hidden {
-      display: none;
-    }
+
     .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
+      gap: 5px;
     }
+
     .day {
-      background: #eef3f8;
-      padding: 10px;
-      min-height: 72px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      text-align: center;
+      min-height: 64px;
+      font-size: 12px;
+      padding: 7px 3px;
+      border-radius: 10px;
     }
-    .day:hover {
-      outline: 2px solid #1f5f8b;
-    }
-    .disabled-day {
-      background: #ddd;
-      color: #888;
-      cursor: not-allowed;
-    }
-    .closed {
-      background: #ddd;
-      color: #777;
-      cursor: not-allowed;
-    }
-    .full {
-      background: #ffd6d6;
-      color: #777;
-      cursor: not-allowed;
-    }
-    .available {
-      background: #dff5e3;
-    }
-    .no-slots {
-      background: #eee;
-      color: #888;
-      cursor: not-allowed;
-    }
-    .slot-button {
-      display: block;
-      width: 100%;
-      margin: 8px 0;
-      padding: 12px;
-      background: #e8f1fa;
-      color: #222;
-      text-align: left;
-      border: 1px solid #b8d0e5;
-    }
-    .slot-button.selected {
-      background: #1f5f8b;
-      color: white;
-    }
-    .slot-button:disabled {
-      background: #ddd;
-      color: #888;
-    }
-    .my-reservation {
-      border: 1px solid #b8d0e5;
-      background: #f0f7ff;
-      padding: 12px;
-      border-radius: 8px;
-    }
-  </style>
+  }
+</style> 
 </head>
 <body>
   <header>
